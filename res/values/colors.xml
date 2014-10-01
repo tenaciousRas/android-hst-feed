@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#000000</color>
+    <color name="white">#ffffff</color>
+    <color name="gray">#ffd0d0d0</color>
+    <color name="dark_gray">#919090</color>
+    <color name="blue">#4433ef</color>
+    <color name="pale_blue">#60273c9f</color>
+    <color name="palest_blue">#30273c9f</color>
+    <color name="yellow">#ffff05</color>
+    <color name="pale_yellow">#60ffff05</color>
+    <color name="palest_yellow">#30ffff05</color>
+</resources>
