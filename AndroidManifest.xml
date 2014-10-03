@@ -17,7 +17,7 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
         <receiver
-            android:name="com.longevitysoft.android.appwidget.hstfeed.appwidget.HSTFeed"
+            android:name=".appwidget.HSTFeed"
             android:label="@string/widget_sm" >
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" >
@@ -31,7 +31,7 @@
         </receiver>
 
         <activity
-            android:name="com.longevitysoft.android.appwidget.hstfeed.activity.HSTFeedConfigure"
+            android:name=".activity.HSTFeedConfigure"
             android:label="@string/configure_hst" >
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" >
@@ -39,19 +39,19 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="com.longevitysoft.android.appwidget.hstfeed.activity.HSTFeedConfigureImages"
+            android:name=".activity.HSTFeedConfigureImages"
             android:excludeFromRecents="true"
             android:label="@string/configure_hst" />
         <activity
-            android:name="com.longevitysoft.android.appwidget.hstfeed.activity.HSTFeedWidgetTouchOptions"
+            android:name=".activity.HSTFeedWidgetTouchOptions"
             android:excludeFromRecents="true"
             android:theme="@android:style/Theme.Dialog" />
         <activity
-            android:name="com.longevitysoft.android.appwidget.hstfeed.activity.HSTFeedConfigureImagesOptions"
-            android:excludeFromRecents="true" 
-            style="@android:style/Theme.Dialog" />
+            android:name=".activity.HSTFeedConfigureImagesOptions"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Dialog" />
         <activity
-            android:name="com.longevitysoft.android.appwidget.hstfeed.activity.HSTFeedFullsizeDisplay"
+            android:name=".activity.HSTFeedFullsizeDisplay"
             android:excludeFromRecents="true" />
 
         <service android:name=".service.HSTFeedService" />
