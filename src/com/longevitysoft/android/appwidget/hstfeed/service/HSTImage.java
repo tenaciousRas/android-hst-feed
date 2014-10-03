@@ -1,4 +1,4 @@
-package net.hstfeed.service;
+package com.longevitysoft.android.appwidget.hstfeed.service;
 
 import android.graphics.Bitmap;
 

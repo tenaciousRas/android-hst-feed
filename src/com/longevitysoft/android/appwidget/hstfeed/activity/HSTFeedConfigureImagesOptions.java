@@ -19,9 +19,8 @@
  * License along with HSTFeed.  If not, see 
  * <http://creativecommons.org/licenses/by-nc-sa/3.0/>.
  */
-package net.hstfeed.activity;
+package com.longevitysoft.android.appwidget.hstfeed.activity;
 
-import net.hstfeed.R;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -33,6 +32,8 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+
+import com.longevitysoft.android.appwidget.hstfeed.R;
 
 /**
  * @author fbeachler

@@ -19,7 +19,7 @@
  * License along with HSTFeed.  If not, see 
  * <http://creativecommons.org/licenses/by-nc-sa/3.0/>.
  */
-package net.hstfeed.service;
+package com.longevitysoft.android.appwidget.hstfeed.service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -30,13 +30,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-
-import net.hstfeed.Constants;
-import net.hstfeed.R;
-import net.hstfeed.activity.HSTFeedFullsizeDisplay;
-import net.hstfeed.activity.HSTFeedWidgetTouchOptions;
-import net.hstfeed.provider.ImageDB;
-import net.hstfeed.provider.ImageDBUtil;
 
 import org.apache.http.client.methods.HttpGet;
 import org.xmlpull.v1.XmlPullParser;
@@ -58,6 +51,13 @@ import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 import android.widget.RemoteViews;
+
+import com.longevitysoft.android.appwidget.hstfeed.Constants;
+import com.longevitysoft.android.appwidget.hstfeed.R;
+import com.longevitysoft.android.appwidget.hstfeed.activity.HSTFeedFullsizeDisplay;
+import com.longevitysoft.android.appwidget.hstfeed.activity.HSTFeedWidgetTouchOptions;
+import com.longevitysoft.android.appwidget.hstfeed.provider.ImageDB;
+import com.longevitysoft.android.appwidget.hstfeed.provider.ImageDBUtil;
 
 /**
  * @author fbeachler

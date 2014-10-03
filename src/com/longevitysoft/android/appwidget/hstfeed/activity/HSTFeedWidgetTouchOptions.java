@@ -19,11 +19,8 @@
  * License along with HSTFeed.  If not, see 
  * <http://creativecommons.org/licenses/by-nc-sa/3.0/>.
  */
-package net.hstfeed.activity;
+package com.longevitysoft.android.appwidget.hstfeed.activity;
 
-import net.hstfeed.R;
-import net.hstfeed.provider.ImageDB;
-import net.hstfeed.service.HSTFeedService;
 import android.appwidget.AppWidgetManager;
 import android.content.Context;
 import android.content.Intent;
@@ -38,6 +35,10 @@ import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.RemoteViews;
 import android.widget.TextView;
+
+import com.longevitysoft.android.appwidget.hstfeed.R;
+import com.longevitysoft.android.appwidget.hstfeed.provider.ImageDB;
+import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService;
 
 /**
  * @author fbeachler

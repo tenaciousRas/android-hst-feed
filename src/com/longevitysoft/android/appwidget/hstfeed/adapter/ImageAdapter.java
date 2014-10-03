@@ -19,7 +19,7 @@
  * License along with HSTFeed.  If not, see 
  * <http://creativecommons.org/licenses/by-nc-sa/3.0/>.
  */
-package net.hstfeed.adapter;
+package com.longevitysoft.android.appwidget.hstfeed.adapter;
 
 import java.util.Vector;
 
@@ -55,9 +55,9 @@ public class ImageAdapter extends BaseAdapter {
 		this.context = context;
 		padding = new int[4];
 		// padding[0] = padding[2] = context.getResources().getInteger(
-		// net.hstfeed.R.dimen.widget_vertical_margin);
+		// com.longevitysoft.android.appwidget.hstfeed.R.dimen.widget_vertical_margin);
 		// padding[1] = padding[3] = context.getResources().getInteger(
-		// net.hstfeed.R.dimen.widget_horizontal_margin);
+		// com.longevitysoft.android.appwidget.hstfeed.R.dimen.widget_horizontal_margin);
 		padding[0] = padding[2] = 2;
 		padding[1] = padding[3] = 4;
 	}

@@ -19,16 +19,12 @@
  * License along with HSTFeed.  If not, see 
  * <http://creativecommons.org/licenses/by-nc-sa/3.0/>.
  */
-package net.hstfeed.activity;
+package com.longevitysoft.android.appwidget.hstfeed.activity;
 
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import net.hstfeed.R;
-import net.hstfeed.provider.ImageDB;
-import net.hstfeed.provider.ImageDBUtil;
-import net.hstfeed.service.HSTFeedService;
 import android.appwidget.AppWidgetManager;
 import android.graphics.Bitmap;
 import android.os.Bundle;
@@ -37,6 +33,11 @@ import android.view.View;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.longevitysoft.android.appwidget.hstfeed.R;
+import com.longevitysoft.android.appwidget.hstfeed.provider.ImageDB;
+import com.longevitysoft.android.appwidget.hstfeed.provider.ImageDBUtil;
+import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService;
 
 /**
  * @author fbeachler
@@ -96,7 +97,7 @@ public class HSTFeedFullsizeDisplay extends BaseActivity {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see net.hstfeed.activity.BaseActivity#onResume()
+	 * @see com.longevitysoft.android.appwidget.hstfeed.activity.BaseActivity#onResume()
 	 */
 	@Override
 	protected void onResume() {

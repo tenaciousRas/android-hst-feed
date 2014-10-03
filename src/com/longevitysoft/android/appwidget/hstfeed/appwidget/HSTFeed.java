@@ -19,10 +19,11 @@
  * License along with HSTFeed.  If not, see 
  * <http://creativecommons.org/licenses/by-nc-sa/3.0/>.
  */
-package net.hstfeed.appwidget;
+package com.longevitysoft.android.appwidget.hstfeed.appwidget;
 
-import net.hstfeed.provider.ImageDB;
-import net.hstfeed.service.HSTFeedService;
+import com.longevitysoft.android.appwidget.hstfeed.provider.ImageDB;
+import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService;
+
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;

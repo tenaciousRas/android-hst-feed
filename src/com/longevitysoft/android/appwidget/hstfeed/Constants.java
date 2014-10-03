@@ -19,7 +19,7 @@
  * License along with HSTFeed.  If not, see 
  * <http://creativecommons.org/licenses/by-nc-sa/3.0/>.
  */
-package net.hstfeed;
+package com.longevitysoft.android.appwidget.hstfeed;
 
 /**
  * @author fbeachler
@@ -27,7 +27,7 @@ package net.hstfeed;
  */
 public final class Constants {
 
-	public static final String APP_PKG_NAME = "net.hstfeed";
+	public static final String APP_PKG_NAME = "com.longevitysoft.android.appwidget.hstfeed";
 
 	public static final String ENCODING_UTF8 = "UTF-8";
 

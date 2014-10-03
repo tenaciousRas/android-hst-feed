@@ -19,7 +19,7 @@
  * License along with HSTFeed.  If not, see 
  * <http://creativecommons.org/licenses/by-nc-sa/3.0/>.
  */
-package net.hstfeed.provider;
+package com.longevitysoft.android.appwidget.hstfeed.provider;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -27,7 +27,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.Random;
 
-import net.hstfeed.Constants;
+import com.longevitysoft.android.appwidget.hstfeed.Constants;
+
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;

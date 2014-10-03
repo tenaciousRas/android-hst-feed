@@ -19,7 +19,7 @@
  * License along with HSTFeed.  If not, see 
  * <http://creativecommons.org/licenses/by-nc-sa/3.0/>.
  */
-package net.hstfeed.provider;
+package com.longevitysoft.android.appwidget.hstfeed.provider;
 
 /**
  * @author fbeachler

@@ -5,4 +5,4 @@
   android:updatePeriodMillis="60000"
   android:minHeight="146dip"
   android:minWidth="146dip"
-  android:configure="net.hstfeed.activity.HSTFeedConfigureSmall"/>
+  android:configure="com.longevitysoft.android.appwidget.hstfeed.activity.HSTFeedConfigureSmall"/>

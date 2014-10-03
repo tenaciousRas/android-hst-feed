@@ -19,11 +19,12 @@
  * License along with HSTFeed.  If not, see 
  * <http://creativecommons.org/licenses/by-nc-sa/3.0/>.
  */
-package net.hstfeed.activity;
+package com.longevitysoft.android.appwidget.hstfeed.activity;
 
 import java.lang.ref.WeakReference;
 
-import net.hstfeed.service.HSTFeedService;
+import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService;
+
 import android.app.Activity;
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
@@ -188,7 +189,8 @@ public class BaseActivity extends Activity {
 	@Override
 	protected void onPause() {
 		super.onPause();
-		if (feedServiceBound && null != mServiceConnection) {
+		stopService(mServiceBindIntent);
+		if (null != mServiceConnection) {
 			try {
 				unbindService(mServiceConnection);
 			} catch (Exception e) {
