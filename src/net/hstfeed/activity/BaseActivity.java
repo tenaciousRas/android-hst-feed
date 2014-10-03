@@ -45,13 +45,13 @@ public class BaseActivity extends Activity {
 
 	public static final String TAG = "BaseActivity";
 
-	public ServiceHandler sHandler;
-	private Intent mServiceBindIntent;
+	protected ServiceHandler sHandler;
+	protected Intent mServiceBindIntent;
 	protected HSTFeedService feedService;
-	private boolean feedServiceBound = false;
-
-	int appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
-	int size;
+	protected boolean feedServiceBound = false;
+	protected int appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
+	protected boolean edit = false;
+	protected int size;
 
 	public static class ServiceHandler extends Handler {
 

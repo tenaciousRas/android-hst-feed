@@ -44,34 +44,20 @@ public class HSTFeed extends AppWidgetProvider {
 			appWidgetIds = appWidgetManager.getAppWidgetIds(new ComponentName(
 					context, HSTFeed.class));
 		}
-
 		for (int appWidgetId : appWidgetIds) {
 			Intent intent = new Intent(context, HSTFeedService.class);
 			intent.putExtra("size", HSTFeedService.SIZE_SMALL);
 			intent.putExtra("appWidgetId", appWidgetId);
 			context.startService(intent);
-
-//			RemoteViews view = new RemoteViews(context.getPackageName(),
-//					R.layout.widget_layout);
-//			ImageDB db = ImageDB.getInstance(context);
-//			Bundle widget = db.getWidget(appWidgetId);
-//			int current = widget.getInt(ImageDBUtil.WIDGETS_CURRENT);
-//			Bitmap dbbm = db.getImageBitmap(appWidgetId, current);
-//			if (dbbm != null) {
-//				view.setImageViewBitmap(R.id.hst_img, dbbm);
-//				AppWidgetManager manager = AppWidgetManager
-//						.getInstance(context);
-//				manager.updateAppWidget(appWidgetId, view);
-//			}
 		}
 	}
 
 	@Override
 	public void onReceive(Context context, Intent intent) {
 		super.onReceive(context, intent);
-		Log.d(TAG, intent.getAction());
-		if (intent.getAction()
-				.equals(AppWidgetManager.ACTION_APPWIDGET_DELETED)) {
+		Log.d(TAG, "onReceive action=" + intent.getAction());
+		if (AppWidgetManager.ACTION_APPWIDGET_DELETED
+				.equals(intent.getAction())) {
 			int appWidgetId = intent.getIntExtra(
 					AppWidgetManager.EXTRA_APPWIDGET_ID,
 					AppWidgetManager.INVALID_APPWIDGET_ID);
@@ -79,14 +65,16 @@ public class HSTFeed extends AppWidgetProvider {
 			db.deleteWidget(appWidgetId);
 			onDeleted(context, new int[] { appWidgetId });
 		}
-		if (intent.getAction()
-				.equals(AppWidgetManager.ACTION_APPWIDGET_ENABLED)) {
+		if (AppWidgetManager.ACTION_APPWIDGET_ENABLED
+				.equals(intent.getAction())
+				|| AppWidgetManager.ACTION_APPWIDGET_UPDATE.equals(intent
+						.getAction())) {
 			int appWidgetId = intent.getIntExtra(
 					AppWidgetManager.EXTRA_APPWIDGET_ID,
 					AppWidgetManager.INVALID_APPWIDGET_ID);
 			Intent servIntent = new Intent(context, HSTFeedService.class);
-			intent.putExtra("size", HSTFeedService.SIZE_SMALL);
-			intent.putExtra("appWidgetId", appWidgetId);
+			servIntent.putExtra("size", HSTFeedService.SIZE_SMALL);
+			servIntent.putExtra("appWidgetId", appWidgetId);
 			context.startService(servIntent);
 		}
 	}

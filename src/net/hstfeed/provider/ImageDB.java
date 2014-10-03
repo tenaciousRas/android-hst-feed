@@ -86,22 +86,6 @@ public class ImageDB extends SQLiteOpenHelper {
 		}
 	}
 
-	public boolean isWidgetSaved(int appWidgetId) {
-		Cursor c = db.query(ImageDBUtil.TABLE_WIDGETS, new String[] {
-				ImageDBUtil.WIDGETS_ID, ImageDBUtil.WIDGETS_ORDER },
-				ImageDBUtil.WIDGETS_ID + " = " + appWidgetId, null, null, null,
-				ImageDBUtil.WIDGETS_ORDER);
-		if (null == c) {
-			return false;
-		}
-		boolean ret = false;
-		if (c.getCount() > 0) {
-			ret = true;
-		}
-		c.close();
-		return ret;
-	}
-
 	/**
 	 * Store the widget params in the DB.
 	 * 
@@ -143,15 +127,15 @@ public class ImageDB extends SQLiteOpenHelper {
 	 */
 	public void updateWidget(int appWidgetId, int period, Float ra, Float dec,
 			Float area, int order) {
+		String whereClause = ImageDBUtil.WIDGETS_ID + " = ?";
+		String[] whereArgs = new String[] { Integer.toString(appWidgetId) };
 		ContentValues values = new ContentValues();
 		values.put(ImageDBUtil.WIDGETS_PERIOD, period);
 		values.put(ImageDBUtil.WIDGETS_RA, ra);
 		values.put(ImageDBUtil.WIDGETS_DEC, dec);
 		values.put(ImageDBUtil.WIDGETS_AREA, area);
 		values.put(ImageDBUtil.WIDGETS_ORDER, order);
-
-		db.update(ImageDBUtil.TABLE_WIDGETS, values, ImageDBUtil.WIDGETS_ID
-				+ " = " + appWidgetId, null);
+		db.update(ImageDBUtil.TABLE_WIDGETS, values, whereClause, whereArgs);
 	}
 
 	/**
@@ -160,18 +144,26 @@ public class ImageDB extends SQLiteOpenHelper {
 	 * @param appWidgetId
 	 */
 	public void invalidateWidget(int appWidgetId) {
+		String whereClause = ImageDBUtil.WIDGETS_ID + " = ?";
+		String[] whereArgs = new String[] { Integer.toString(appWidgetId) };
 		ContentValues values = new ContentValues();
 		values.put(ImageDBUtil.WIDGETS_LASTUPDATE, 0);
-
-		db.update(ImageDBUtil.TABLE_WIDGETS, values, ImageDBUtil.WIDGETS_ID
-				+ " = " + appWidgetId, null);
+		db.update(ImageDBUtil.TABLE_WIDGETS, values, whereClause, whereArgs);
 	}
 
+	/**
+	 * Delete widget from storage and all associated images.
+	 * 
+	 * @param appWidgetId
+	 */
 	public void deleteWidget(int appWidgetId) {
-		db.delete(ImageDBUtil.TABLE_WIDGETS, ImageDBUtil.WIDGETS_ID + " = "
-				+ appWidgetId, null);
-		db.delete(ImageDBUtil.TABLE_IMAGES, ImageDBUtil.IMAGES_WIDGETID + " = "
-				+ appWidgetId, null);
+		String whereClause = null;
+		String[] whereArgs = new String[0];
+		whereArgs = new String[] { Integer.toString(appWidgetId) };
+		whereClause = ImageDBUtil.WIDGETS_ID + " = ?";
+		db.delete(ImageDBUtil.TABLE_WIDGETS, whereClause, whereArgs);
+		whereClause = ImageDBUtil.IMAGES_WIDGETID + " = ?";
+		db.delete(ImageDBUtil.TABLE_IMAGES, whereClause, whereArgs);
 	}
 
 	/**
@@ -218,6 +210,10 @@ public class ImageDB extends SQLiteOpenHelper {
 						int oldCurrent = current;
 						do {
 							current = rand.nextInt(c.getCount());
+							c.moveToFirst();
+							c.move(current - 1);
+							current = c.getInt(c
+									.getColumnIndex(ImageDBUtil.IMAGES_ID));
 						} while (current == oldCurrent);
 					} else {
 						c.moveToFirst();
@@ -428,8 +424,10 @@ public class ImageDB extends SQLiteOpenHelper {
 	 * @return
 	 */
 	public Bundle getImageMeta(int appWidgetId, int imgId) {
-		String whereClause = ImageDBUtil.IMAGES_ID + " = ?";
-		String[] whereArgs = new String[] { Integer.toString(imgId) };
+		String whereClause = ImageDBUtil.IMAGES_WIDGETID + " = ? AND "
+				+ ImageDBUtil.IMAGES_ID + " = ?";
+		String[] whereArgs = new String[] { Integer.toString(appWidgetId),
+				Integer.toString(imgId) };
 		Cursor c = db.query(ImageDBUtil.TABLE_IMAGES, new String[] {
 				ImageDBUtil.IMAGES_ID, ImageDBUtil.IMAGES_WIDGETID,
 				ImageDBUtil.IMAGES_WEIGHT, ImageDBUtil.IMAGES_NAME,
@@ -468,14 +466,27 @@ public class ImageDB extends SQLiteOpenHelper {
 	}
 
 	/**
+	 * Delete all images from storage.
+	 * 
+	 * @param appWidgetId
+	 */
+	public void deleteAllImages(int appWidgetId) {
+		String whereClause = ImageDBUtil.IMAGES_WIDGETID + " = ?";
+		String[] whereArgs = new String[] { Integer.toString(appWidgetId) };
+		whereClause = ImageDBUtil.IMAGES_WIDGETID + " = ?";
+		db.delete(ImageDBUtil.TABLE_IMAGES, whereClause, whereArgs);
+	}
+
+	/**
 	 * @param appWidgetId
 	 * @param position
 	 */
 	public void deleteImage(int appWidgetId, int position) {
+		String whereClause = ImageDBUtil.IMAGES_WIDGETID + " = ?";
+		String[] whereArgs = new String[] { Integer.toString(appWidgetId) };
 		Cursor c = db.query(ImageDBUtil.TABLE_IMAGES,
-				new String[] { ImageDBUtil.IMAGES_ID },
-				ImageDBUtil.IMAGES_WIDGETID + " = " + appWidgetId, null, null,
-				null, ImageDBUtil.IMAGES_WEIGHT);
+				new String[] { ImageDBUtil.IMAGES_ID }, whereClause, whereArgs,
+				null, null, null, ImageDBUtil.IMAGES_WEIGHT);
 		if (c == null) {
 			return;
 		}
@@ -499,12 +510,14 @@ public class ImageDB extends SQLiteOpenHelper {
 	 * @param direction
 	 */
 	public void moveImage(int appWidgetId, int position, int direction) {
-		if (position == 0 && direction < 0)
+		if (position == 0 && direction < 0) {
 			return;
+		}
+		String whereClause = ImageDBUtil.IMAGES_WIDGETID + " = ?";
+		String[] whereArgs = new String[] { Integer.toString(appWidgetId) };
 		Cursor c = db.query(ImageDBUtil.TABLE_IMAGES, new String[] {
 				ImageDBUtil.IMAGES_ID, ImageDBUtil.IMAGES_WEIGHT },
-				ImageDBUtil.IMAGES_WIDGETID + " = " + appWidgetId, null, null,
-				null, ImageDBUtil.IMAGES_WEIGHT);
+				whereClause, whereArgs, null, null, ImageDBUtil.IMAGES_WEIGHT);
 		if (c == null) {
 			return;
 		}
@@ -539,13 +552,14 @@ public class ImageDB extends SQLiteOpenHelper {
 
 			ContentValues values = new ContentValues();
 			values.put(ImageDBUtil.IMAGES_WEIGHT, newWeight);
-			db.update(ImageDBUtil.TABLE_IMAGES, values, ImageDBUtil.IMAGES_ID
-					+ " = " + id, null);
+			whereClause = ImageDBUtil.IMAGES_ID + " = ?";
+			whereArgs = new String[] { Integer.toString(id) };
+			db.update(ImageDBUtil.TABLE_IMAGES, values, whereClause, whereArgs);
 
 			values = new ContentValues();
 			values.put(ImageDBUtil.IMAGES_WEIGHT, weight);
-			db.update(ImageDBUtil.TABLE_IMAGES, values, ImageDBUtil.IMAGES_ID
-					+ " = " + newID, null);
+			whereArgs = new String[] { Integer.toString(newID) };
+			db.update(ImageDBUtil.TABLE_IMAGES, values, whereClause, whereArgs);
 		}
 		c.close();
 	}
@@ -555,20 +569,24 @@ public class ImageDB extends SQLiteOpenHelper {
 	 * @return
 	 */
 	public Bundle getWidget(int appWidgetId) {
-		Cursor c = db.query(ImageDBUtil.TABLE_WIDGETS,
-				new String[] { ImageDBUtil.WIDGETS_CURRENT,
-						ImageDBUtil.WIDGETS_LASTUPDATE,
-						ImageDBUtil.WIDGETS_ORDER, ImageDBUtil.WIDGETS_PERIOD,
-						ImageDBUtil.WIDGETS_RA, ImageDBUtil.WIDGETS_DEC,
-						ImageDBUtil.WIDGETS_AREA, ImageDBUtil.WIDGETS_TYPE,
-						ImageDBUtil.WIDGETS_IMG_LIST_COUNT,
-						ImageDBUtil.WIDGETS_UPDATES }, ImageDBUtil.WIDGETS_ID
-						+ " = " + appWidgetId, null, null, null, null);
-		Bundle bundle = new Bundle();
+		String whereClause = ImageDBUtil.WIDGETS_ID + " = ?";
+		String[] whereArgs = new String[] { Integer.toString(appWidgetId) };
+		Cursor c = db.query(ImageDBUtil.TABLE_WIDGETS, new String[] {
+				ImageDBUtil.WIDGETS_ID, ImageDBUtil.WIDGETS_CURRENT,
+				ImageDBUtil.WIDGETS_LASTUPDATE, ImageDBUtil.WIDGETS_ORDER,
+				ImageDBUtil.WIDGETS_PERIOD, ImageDBUtil.WIDGETS_RA,
+				ImageDBUtil.WIDGETS_DEC, ImageDBUtil.WIDGETS_AREA,
+				ImageDBUtil.WIDGETS_TYPE, ImageDBUtil.WIDGETS_IMG_LIST_COUNT,
+				ImageDBUtil.WIDGETS_UPDATES }, whereClause, whereArgs, null,
+				null, null);
+		Bundle bundle = null;
 		if (c == null) {
 			return bundle;
 		}
 		if (c.moveToFirst()) {
+			bundle = new Bundle();
+			bundle.putInt(ImageDBUtil.WIDGETS_ID, Integer.valueOf(c.getInt(c
+					.getColumnIndex(ImageDBUtil.WIDGETS_ID))));
 			bundle.putInt(ImageDBUtil.WIDGETS_CURRENT, Integer.valueOf(c
 					.getInt(c.getColumnIndex(ImageDBUtil.WIDGETS_CURRENT))));
 			bundle.putLong(ImageDBUtil.WIDGETS_LASTUPDATE, Long.valueOf(c
@@ -599,20 +617,21 @@ public class ImageDB extends SQLiteOpenHelper {
 	 * @return
 	 */
 	public Bundle getWidgetImages(int appWidgetId) {
+		String whereClause = ImageDBUtil.IMAGES_WIDGETID + " = ?";
+		String[] whereArgs = new String[] { Integer.toString(appWidgetId) };
 		Cursor c = db.query(ImageDBUtil.TABLE_IMAGES,
-				new String[] { ImageDBUtil.IMAGES_FILEPATH },
-				ImageDBUtil.IMAGES_WIDGETID + " = " + appWidgetId, null, null,
-				null, ImageDBUtil.IMAGES_WEIGHT);
+				new String[] { ImageDBUtil.IMAGES_FILEPATH }, whereClause,
+				whereArgs, null, null, ImageDBUtil.IMAGES_WEIGHT);
 
 		Bundle ret = new Bundle();
 		Bitmap[] bmps = new Bitmap[0];
 		if (c.moveToFirst()) {
 			bmps = new Bitmap[c.getCount()];
-			for (int i = 0; i < c.getCount(); i++) {
+			for (int i = 0; i < bmps.length; i++) {
 				String bitmapFilepath = c.getString(c
 						.getColumnIndex(ImageDBUtil.IMAGES_FILEPATH));
 				bmps[i] = BitmapFactory.decodeFile(bitmapFilepath);
-				i++;
+				c.moveToNext();
 			}
 		}
 		c.close();

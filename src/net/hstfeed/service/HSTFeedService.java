@@ -33,6 +33,8 @@ import java.util.Locale;
 
 import net.hstfeed.Constants;
 import net.hstfeed.R;
+import net.hstfeed.activity.HSTFeedFullsizeDisplay;
+import net.hstfeed.activity.HSTFeedWidgetTouchOptions;
 import net.hstfeed.provider.ImageDB;
 import net.hstfeed.provider.ImageDBUtil;
 
@@ -41,6 +43,7 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 
+import android.app.PendingIntent;
 import android.app.Service;
 import android.appwidget.AppWidgetManager;
 import android.content.Context;
@@ -53,6 +56,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.View;
 import android.widget.RemoteViews;
 
 /**
@@ -73,153 +77,6 @@ public class HSTFeedService extends Service {
 
 	public static final String BUNDLE_NAME_REMOTE_VIEWS = "views.remote";
 
-	public static class HSTImage {
-		private String name;
-		private String archiveUrl;
-		private String fullUrl;
-		private String filePath;
-		private String caption;
-		private String captionUrl;
-		private String credits;
-		private String creditsUrl;
-		private Bitmap img;
-
-		/**
-		 * @return the url
-		 */
-		public String getFullUrl() {
-			return fullUrl;
-		}
-
-		/**
-		 * @param url
-		 *            the url to set
-		 */
-		public void setFullUrl(String fullUrl) {
-			this.fullUrl = fullUrl;
-		}
-
-		/**
-		 * @return the name
-		 */
-		public String getName() {
-			return name;
-		}
-
-		/**
-		 * @param name
-		 *            the name to set
-		 */
-		public void setName(String name) {
-			this.name = name;
-		}
-
-		/**
-		 * @return the caption
-		 */
-		public String getCaption() {
-			return caption;
-		}
-
-		/**
-		 * @param caption
-		 *            the caption to set
-		 */
-		public void setCaption(String caption) {
-			this.caption = caption;
-		}
-
-		/**
-		 * @return the captionUrl
-		 */
-		public String getCaptionUrl() {
-			return captionUrl;
-		}
-
-		/**
-		 * @param captionUrl
-		 *            the captionUrl to set
-		 */
-		public void setCaptionUrl(String captionUrl) {
-			this.captionUrl = captionUrl;
-		}
-
-		/**
-		 * @return the archiveUrl
-		 */
-		public String getArchiveUrl() {
-			return archiveUrl;
-		}
-
-		/**
-		 * @param archiveUrl
-		 *            the archiveUrl to set
-		 */
-		public void setArchiveUrl(String archiveUrl) {
-			this.archiveUrl = archiveUrl;
-		}
-
-		/**
-		 * @return the credits
-		 */
-		public String getCredits() {
-			return credits;
-		}
-
-		/**
-		 * @param credits
-		 *            the credits to set
-		 */
-		public void setCredits(String credits) {
-			this.credits = credits;
-		}
-
-		/**
-		 * @return the filePath
-		 */
-		public String getFilePath() {
-			return filePath;
-		}
-
-		/**
-		 * @param filePath
-		 *            the filePath to set
-		 */
-		public void setFilePath(String filePath) {
-			this.filePath = filePath;
-		}
-
-		/**
-		 * @return the creditsUrl
-		 */
-		public String getCreditsUrl() {
-			return creditsUrl;
-		}
-
-		/**
-		 * @param creditsUrl
-		 *            the creditsUrl to set
-		 */
-		public void setCreditsUrl(String creditsUrl) {
-			this.creditsUrl = creditsUrl;
-		}
-
-		/**
-		 * @return the img
-		 */
-		public Bitmap getImg() {
-			return img;
-		}
-
-		/**
-		 * @param img
-		 *            the img to set
-		 */
-		public void setImg(Bitmap img) {
-			this.img = img;
-		}
-	}
-
 	public class LocalBinder extends Binder {
 		public static final String TAG = HSTFeedService.TAG + "$LocalBinder";
 
@@ -230,12 +87,18 @@ public class HSTFeedService extends Service {
 	}
 
 	@SuppressWarnings("unused")
-	private int size;
-	@SuppressWarnings("unused")
 	private Handler activityHandler;
 	private final IBinder binder = new LocalBinder();
+	private AppWidgetManager manager;
 	private DownloadHSTFeedXMLTask feedAsync;
+	private boolean downloadInProgress;
 
+	@Override
+	public IBinder onBind(Intent intent) {
+		return binder;
+	}
+
+	@SuppressWarnings("deprecation")
 	@Override
 	public void onStart(Intent intent, int startId) {
 		super.onStart(intent, startId);
@@ -244,11 +107,12 @@ public class HSTFeedService extends Service {
 		}
 		int appWidgetId = intent.getIntExtra("appWidgetId",
 				AppWidgetManager.INVALID_APPWIDGET_ID);
-		AppWidgetManager manager = AppWidgetManager.getInstance(this);
-		size = intent.getIntExtra("size", SIZE_SMALL);
-		feedAsync = new DownloadHSTFeedXMLTask();
-		feedAsync.setManager(manager);
-		RemoteViews update = buildRemoteViews(this, appWidgetId);
+		if (AppWidgetManager.INVALID_APPWIDGET_ID == appWidgetId) {
+			return;
+		}
+		manager = AppWidgetManager.getInstance(this);
+		int size = intent.getIntExtra("size", SIZE_SMALL);
+		RemoteViews update = buildRemoteViews(this, appWidgetId, size);
 		manager.updateAppWidget(appWidgetId, update);
 	}
 
@@ -266,33 +130,47 @@ public class HSTFeedService extends Service {
 	 * @param appWidgetId
 	 * @return
 	 */
-	public RemoteViews buildRemoteViews(Context context, int appWidgetId) {
+	public RemoteViews buildRemoteViews(Context context, int appWidgetId,
+			int size) {
+		ImageDB db = ImageDB.getInstance(context);
+		Bundle widget = db.getWidget(appWidgetId);
+		if (null == widget) {
+			return buildEmptyView(context, appWidgetId, size);
+		}
 		RemoteViews view = new RemoteViews(context.getPackageName(),
 				R.layout.widget_layout);
-		ImageDB db = ImageDB.getInstance(context);
-		if (!db.isWidgetSaved(appWidgetId)) {
-			return view;
-		}
-		if (db.needsUpdate(appWidgetId) && !feedAsync.isExecuting()) {
-			Bundle widget = db.getWidget(appWidgetId);
-			int current = widget.getInt(ImageDBUtil.WIDGETS_CURRENT);
-			float ra = widget.getFloat(ImageDBUtil.WIDGETS_RA);
-			float dec = widget.getFloat(ImageDBUtil.WIDGETS_DEC);
-			float area = widget.getFloat(ImageDBUtil.WIDGETS_AREA);
-			// set text views
-			view.setTextViewText(R.id.ra, Float.toString(ra) + Constants.SEMICOLON + Constants.SPACE);
-			view.setTextViewText(R.id.dec, Float.toString(dec)
-					+ Constants.SEMICOLON + Constants.SPACE);
-			view.setTextViewText(
-					R.id.area,
-					Float.toString(area)
-							+ context.getString(R.string.sym_degree));
+		int current = widget.getInt(ImageDBUtil.WIDGETS_CURRENT);
+		float ra = widget.getFloat(ImageDBUtil.WIDGETS_RA);
+		float dec = widget.getFloat(ImageDBUtil.WIDGETS_DEC);
+		float area = widget.getFloat(ImageDBUtil.WIDGETS_AREA);
+		// set text views
+		view.setTextViewText(R.id.ra, Float.toString(ra) + Constants.SEMICOLON
+				+ Constants.SPACE);
+		view.setTextViewText(R.id.dec, Float.toString(dec)
+				+ Constants.SEMICOLON + Constants.SPACE);
+		view.setTextViewText(R.id.area,
+				Float.toString(area) + context.getString(R.string.sym_degree));
+		if (db.needsUpdate(appWidgetId)) {
 			// set bitmap
 			Bundle imgData = db.getImageMeta(appWidgetId, current);
-			if (imgData.getString(ImageDBUtil.IMAGES_FILEPATH) == null) {
-				feedAsync.execute(Integer.toString(appWidgetId), MAST_URL,
-						Float.toString(ra), Float.toString(dec),
-						Float.toString(area));
+			if (imgData.getString(ImageDBUtil.IMAGES_FILEPATH) == null
+					&& !downloadInProgress) {
+				// load feed+images in background
+				feedAsync = new DownloadHSTFeedXMLTask();
+				feedAsync.setManager(manager);
+				downloadInProgress = true;
+				feedAsync.execute(Integer.toString(appWidgetId),
+						Integer.toString(size), MAST_URL, Float.toString(ra),
+						Float.toString(dec), Float.toString(area));
+				// set loading msg
+				view.setViewVisibility(R.id.hst_img_loading, View.VISIBLE);
+				view.setViewVisibility(R.id.label_credits, View.INVISIBLE);
+				view.setViewVisibility(R.id.credits, View.INVISIBLE);
+				view.setViewVisibility(R.id.name, View.INVISIBLE);
+				view.setImageViewResource(R.id.hst_img,
+						R.drawable.ic_feed_loading);
+				view = buildImageViewClickIntent(view, appWidgetId, size,
+						widget, null);
 			} else {
 				if (imgData.getString(ImageDBUtil.IMAGES_NAME) != null) {
 					view.setTextViewText(R.id.name,
@@ -304,24 +182,15 @@ public class HSTFeedService extends Service {
 				}
 				Bitmap dbbm = db.getImageBitmap(appWidgetId, current);
 				if (dbbm != null) {
+					view.setViewVisibility(R.id.hst_img_loading, View.INVISIBLE);
+					view.setViewVisibility(R.id.label_credits, View.VISIBLE);
+					view.setViewVisibility(R.id.credits, View.VISIBLE);
+					view.setViewVisibility(R.id.name, View.VISIBLE);
 					view.setImageViewBitmap(R.id.hst_img, dbbm);
 				}
-				// Uri uri = Uri.fromFile(new File(imgData
-				// .getString(ImageDBUtil.IMAGES_FILEPATH)));
-				// Uri uri =
-				// Uri.parse(imgData.getString(ImageDBUtil.IMAGES_ARCHIVE_URI));
-				// set bitmap
-				// view.setImageViewUri(R.id.hst_img,
-				// Uri.parse(Constants.BLANK));
-				// view.setImageViewUri(R.id.hst_img, uri);
 				// set click intent
-				// Intent configIntent = new Intent(context,
-				// HSTFeedImageTouchOptions.class);
-				// configIntent.putExtra("wid", appWidgetId);
-				// configIntent.putExtra("size", size);
-				// PendingIntent pending = PendingIntent.getActivity(context, 0,
-				// configIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-				// view.setOnClickPendingIntent(R.id.widget_frame, pending);
+				view = buildImageViewClickIntent(view, appWidgetId, size,
+						widget, imgData);
 			}
 		}
 		return view;
@@ -331,17 +200,19 @@ public class HSTFeedService extends Service {
 			AsyncTask<String, Void, Integer> {
 
 		private AppWidgetManager manager;
-		private boolean executing;
 		private int appWidgetId = -1;
+		private int size = SIZE_SMALL;
 
 		@Override
 		protected Integer doInBackground(String... params) {
-			executing = true;
+			Log.d(TAG, "doInBackground started");
+			// download feed
 			appWidgetId = Integer.parseInt(params[0]);
+			size = Integer.parseInt(params[1]);
 			ImageDB db = ImageDB.getInstance(getBaseContext());
-			String url = params[1] + "?";
-			url += "pos=" + params[2] + Constants.COMMA + params[3] + "&size="
-					+ params[4];
+			String url = params[2] + "?";
+			url += "pos=" + params[3] + Constants.COMMA + params[4] + "&size="
+					+ params[5];
 			Log.i(TAG, "download feed from url=" + url);
 			List<HSTImage> feedImages = downloadFeedXML(url);
 			int insertCnt = 0;
@@ -353,9 +224,7 @@ public class HSTFeedService extends Service {
 									.getArchiveUrl())).toByteArray();
 					if (imgData.length > 0) {
 						// store immediately
-						// db.setImage(appWidgetId, i, BitmapFactory
-						// .decodeByteArray(imgData, 0, imgData.length));
-						db.setImage(appWidgetId, feedImages.get(i).name,
+						db.setImage(appWidgetId, feedImages.get(i).getName(),
 								feedImages.get(i).getArchiveUrl(), feedImages
 										.get(i).getFullUrl(), feedImages.get(i)
 										.getCredits(), feedImages.get(i)
@@ -366,49 +235,67 @@ public class HSTFeedService extends Service {
 					}
 				}
 			}
+			Log.d(TAG, "doInBackground finished");
 			return insertCnt;
 		}
 
 		@Override
 		protected void onPostExecute(Integer insertCnt) {
+			Log.d(TAG, "onPostExecute started");
+			ImageDB db = ImageDB.getInstance(getBaseContext());
+			Bundle widget = db.getWidget(appWidgetId);
+			if (null == widget) {
+				Log.w(TAG,
+						"something is awry, could not retrieve widget that was just updated");
+				return;
+			}
+			RemoteViews view = null;
 			if (insertCnt != null && insertCnt > 0 && appWidgetId > -1) {
-				ImageDB db = ImageDB.getInstance(getBaseContext());
-				Bundle widget = db.getWidget(appWidgetId);
 				int current = widget.getInt(ImageDBUtil.WIDGETS_CURRENT);
-				RemoteViews view = new RemoteViews(getBaseContext()
-						.getPackageName(), R.layout.widget_layout);
+				view = new RemoteViews(getBaseContext().getPackageName(),
+						R.layout.widget_layout);
 				Bitmap dbbm = db.getImageBitmap(appWidgetId, current);
 				Bundle imgData = db.getImageMeta(appWidgetId, current);
 				if (imgData.getString(ImageDBUtil.IMAGES_FILEPATH) == null) {
 					Log.w(TAG,
 							"something is awry - could not get the cached file path for the file just downloaded");
+					downloadInProgress = false;
+					return;
 				}
 				if (dbbm != null) {
+					view.setViewVisibility(R.id.hst_img_loading, View.INVISIBLE);
+					view.setViewVisibility(R.id.label_credits, View.VISIBLE);
+					view.setViewVisibility(R.id.credits, View.VISIBLE);
+					view.setViewVisibility(R.id.name, View.VISIBLE);
 					view.setImageViewBitmap(R.id.hst_img, dbbm);
 					if (imgData.getString(ImageDBUtil.IMAGES_NAME) != null) {
-						view.setTextViewText(R.id.name,
-								imgData.getString(ImageDBUtil.IMAGES_NAME));
+						view.setTextViewText(R.id.name, HSTFeedFullsizeDisplay
+								.toTitleCase(imgData
+										.getString(ImageDBUtil.IMAGES_NAME)));
 					}
 					if (imgData.getString(ImageDBUtil.IMAGES_CREDITS) != null) {
 						view.setTextViewText(R.id.credits,
 								imgData.getString(ImageDBUtil.IMAGES_CREDITS));
 					}
 					// set click intent
-					// Intent configIntent = new Intent(getBaseContext(),
-					// HSTFeedImageTouchOptions.class);
-					// configIntent.putExtra("wid", appWidgetId);
-					// configIntent.putExtra("size", size);
-					// configIntent.putExtra("url", "foobar");
-					// PendingIntent pending = PendingIntent.getActivity(
-					// getBaseContext(), 0, configIntent,
-					// PendingIntent.FLAG_UPDATE_CURRENT);
-					// update.setOnClickPendingIntent(R.id.widget_frame,
-					// pending);
-					// update widget
-					manager.updateAppWidget(appWidgetId, view);
+					view = buildImageViewClickIntent(view, appWidgetId, size,
+							widget, imgData);
 				}
+			} else if (insertCnt != null && insertCnt < 1) {
+				view = new RemoteViews(getBaseContext().getPackageName(),
+						R.layout.widget_layout_empty);
+				view.setTextViewText(R.id.content, String.format(
+						getString(R.string.no_images_found),
+						widget.getFloat("ra"), widget.getFloat("dec"),
+						widget.getFloat("area")));
+				view = buildImageViewClickIntent(view, appWidgetId, size,
+						widget, null);
 			}
-			executing = false;
+			if (null != view) {
+				// update widget
+				manager.updateAppWidget(appWidgetId, view);
+			}
+			downloadInProgress = false;
 			Log.d(TAG, "onPostExecute finished");
 		}
 
@@ -420,14 +307,7 @@ public class HSTFeedService extends Service {
 		@Override
 		protected void onCancelled() {
 			super.onCancelled();
-			executing = false;
-		}
-
-		/**
-		 * @return the executing
-		 */
-		public boolean isExecuting() {
-			return executing;
+			downloadInProgress = false;
 		}
 
 		/**
@@ -608,15 +488,51 @@ public class HSTFeedService extends Service {
 			transformed.append(parsed.getPathSegments().get(4));
 			transformed.append("-");
 			transformed.append(parsed.getPathSegments().get(6));
-			transformed.append("-small_web.jpg");
+			transformed.append("-web.jpg");
 			return transformed.toString();
 		}
-
 	}
 
-	@Override
-	public IBinder onBind(Intent intent) {
-		return binder;
+	/**
+	 * Modifies the input view with an onclick pendingintent.
+	 * 
+	 * @param view
+	 * @param appWidgetId
+	 * @param size
+	 * @param widget
+	 * @param imgData
+	 * @return modifies the input view with an onclick, and returns the modified
+	 *         view
+	 */
+	private RemoteViews buildImageViewClickIntent(final RemoteViews view,
+			final int appWidgetId, final int size, final Bundle widget,
+			final Bundle imgData) {
+		if (null == view) {
+			return null;
+		}
+		RemoteViews ret = view;
+		Intent configIntent = new Intent(getBaseContext(),
+				HSTFeedWidgetTouchOptions.class);
+		configIntent.putExtra("size", size);
+		configIntent.putExtra("appWidgetId", appWidgetId);
+		configIntent.putExtra("widget", widget);
+		configIntent.putExtra("imageData", imgData);
+		PendingIntent pending = PendingIntent.getActivity(getBaseContext(), 0,
+				configIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+		ret.setOnClickPendingIntent(R.id.widget_frame, pending);
+		return ret;
+	}
+
+	/**
+	 * @param context
+	 * @return
+	 */
+	private RemoteViews buildEmptyView(Context context, int appWidgetId,
+			int size) {
+		RemoteViews view = new RemoteViews(context.getPackageName(),
+				R.layout.widget_layout_empty);
+		view = buildImageViewClickIntent(view, appWidgetId, size, null, null);
+		return view;
 	}
 
 }

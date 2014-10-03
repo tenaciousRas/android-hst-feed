@@ -4,10 +4,11 @@
     <color name="white">#ffffff</color>
     <color name="gray">#ffd0d0d0</color>
     <color name="dark_gray">#919090</color>
-    <color name="blue">#4433ef</color>
-    <color name="pale_blue">#60273c9f</color>
-    <color name="palest_blue">#30273c9f</color>
-    <color name="yellow">#ffff05</color>
-    <color name="pale_yellow">#60ffff05</color>
-    <color name="palest_yellow">#30ffff05</color>
+    <color name="blue">#232399</color>
+    <color name="pale_blue">#60232399</color>
+    <color name="palest_blue">#30232399</color>
+    <color name="green">#09fd11</color>
+    <color name="pale_green">#6009fd11</color>
+    <color name="palest_green">#3009fd11</color>
+    <color name="dark_green">#05ac07</color>
 </resources>

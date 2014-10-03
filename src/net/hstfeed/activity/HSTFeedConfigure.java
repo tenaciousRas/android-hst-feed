@@ -22,6 +22,8 @@
 package net.hstfeed.activity;
 
 import net.hstfeed.R;
+import net.hstfeed.provider.ImageDB;
+import net.hstfeed.provider.ImageDBUtil;
 import net.hstfeed.service.HSTFeedService;
 import android.appwidget.AppWidgetManager;
 import android.content.Intent;
@@ -48,8 +50,10 @@ public class HSTFeedConfigure extends BaseActivity {
 
 	public static final int TYPE_LOCAL = 0;
 
-	EditText ra, dec, area;
-	Button cancel, go;
+	private EditText ra, dec, area;
+	private Button cancel, go;
+	private Float origRa, origDec, origArea;
+	private Bundle widget;
 
 	/*
 	 * (non-Javadoc)
@@ -60,7 +64,6 @@ public class HSTFeedConfigure extends BaseActivity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.config_widget);
-
 		size = getIntent().getIntExtra("size", HSTFeedService.SIZE_SMALL);
 		appWidgetId = getIntent().getIntExtra(
 				AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
@@ -69,13 +72,21 @@ public class HSTFeedConfigure extends BaseActivity {
 			finish();
 			return;
 		}
-
+		edit = getIntent().getBooleanExtra("edit", false);
+		widget = getIntent().getBundleExtra("widget");
+		if (!edit) {
+			origRa = origDec = origArea = -1f;
+		} else {
+			origRa = widget.getFloat("ra", -1f);
+			origDec = widget.getFloat("dec", -1f);
+			origArea = widget.getFloat("area", -1f);
+		}
 		ra = (EditText) findViewById(R.id.search_ra);
 		dec = (EditText) findViewById(R.id.search_dec);
 		area = (EditText) findViewById(R.id.search_area);
 		cancel = (Button) findViewById(R.id.config_begin_cancel);
 		go = (Button) findViewById(R.id.config_begin_go);
-
+		final ImageDB db = ImageDB.getInstance(getBaseContext());
 		cancel.setOnClickListener(new OnClickListener() {
 
 			@Override
@@ -92,6 +103,9 @@ public class HSTFeedConfigure extends BaseActivity {
 						HSTFeedConfigureImages.class);
 				intent.putExtra("appWidgetId", appWidgetId);
 				intent.putExtra("size", size);
+				if (null == widget) {
+					widget = new Bundle();
+				}
 				String txtVal = null;
 				Float fVal = 0f;
 				txtVal = ra.getText().toString().trim();
@@ -99,22 +113,58 @@ public class HSTFeedConfigure extends BaseActivity {
 					txtVal = "0";
 				}
 				fVal = Float.parseFloat(txtVal);
-				intent.putExtra("ra", fVal);
+				widget.putFloat("ra", fVal);
 				txtVal = dec.getText().toString().trim();
 				if (txtVal == null || txtVal.length() < 1) {
 					txtVal = "0";
 				}
 				fVal = Float.parseFloat(txtVal);
-				intent.putExtra("dec", fVal);
+				widget.putFloat("dec", fVal);
 				txtVal = area.getText().toString().trim();
 				if (txtVal == null || txtVal.length() < 1) {
 					txtVal = "0";
 				}
 				fVal = Float.parseFloat(txtVal);
-				intent.putExtra("area", fVal);
+				widget.putFloat("area", fVal);
+				if (!edit) {
+					// store widget
+					db.createWidget(appWidgetId, HSTFeedConfigure.TYPE_LOCAL,
+							0, widget.getFloat("ra", 0f),
+							widget.getFloat("dec", 0f),
+							widget.getFloat("area", 0f), 0);
+				} else {
+					db.updateWidget(appWidgetId, 0, widget.getFloat("ra", 0f),
+							widget.getFloat("dec", 0f),
+							widget.getFloat("area", 0f), 0);
+				}
+				if (!origRa.equals(widget.getFloat("ra"))
+						|| !origDec.equals(widget.getFloat("dec"))
+						|| !origRa.equals(widget.getFloat("area"))) {
+					db.deleteAllImages(appWidgetId);
+				}
+				// launch next activity
+				intent.putExtra("widget", widget);
 				startActivityForResult(intent, REQUEST_LOCAL);
 			}
 		});
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see net.hstfeed.activity.BaseActivity#onResume()
+	 */
+	@Override
+	protected void onResume() {
+		super.onResume();
+		if (edit) {
+			ra.setText(Float.toString(getIntent().getBundleExtra("widget")
+					.getFloat("ra")));
+			dec.setText(Float.toString(getIntent().getBundleExtra("widget")
+					.getFloat("dec")));
+			area.setText(Float.toString(getIntent().getBundleExtra("widget")
+					.getFloat("area")));
+		}
 	}
 
 	/*

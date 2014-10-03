@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">HST Images Feed</string>
-    <string name="app_desc">HST Images Feed is an Android Application that displays a slideshow of HST PR images from the MAST web service.</string>
+    <string name="app_name">HST Images Feed Widget</string>
+    <string name="app_desc">HST Images Feed Widget is an Android Application that displays a slideshow of HST PR images from the MAST web service.</string>
     <!-- labels -->
     <string name="widget_sm">HST Feed (Small)</string>
     <string name="widget_med">HST Feed (Medium)</string>
@@ -13,6 +13,7 @@
     <string name="search_radius">Search Radius</string>
     <string name="area">Area</string>
     <string name="loading">Loading</string>
+    <string name="loading_hst_feed">Loading Images from HST Feed&#8230;</string>
     <string name="cancel">Cancel</string>
     <string name="go">Go</string>
     <string name="next">Next</string>
@@ -21,6 +22,8 @@
     <string name="configure_search">Configure Search</string>
     <string name="randomize">Randomize R.A., Dec., and Area</string>
     <string name="configure_hst">Configure HST Images Feed Widget</string>
+    <string name="configure_widget">Configure Widget</string>
+    <string name="view_fullsize">View Full Image</string>
     <string name="next_image">Next Image</string>
     <string name="prev_image">Prev Image</string>
     <string name="delete_image">Delete Image</string>
@@ -28,10 +31,12 @@
     <string name="missing_interval">Update interval required!</string>
     <string name="download_image_list">Downloading image list&#8230;</string>
     <string name="download_images" formatted="false">Downloading image %d of %d&#8230;</string>
+    <string name="no_images_found" formatted="false">No images were found at RA=%f, DEC=%f, Area=%f</string>
     <string name="download_title">Download HST Feed Images</string>
     <string name="download_wait">Please wait&#8230;</string>
     <string name="feed_images_empty">Search Returned Nothing</string>
     <string name="feed_images_count">%d Image(s) in Feed</string>
+    <string name="pls_configure">To display awesome HST images, click to configure this widget.</string>
     <!-- abbrevs -->
     <string name="abbr_ra">R.A.</string>
     <string name="abbr_dec">Dec.</string>

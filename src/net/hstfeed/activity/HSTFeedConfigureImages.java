@@ -47,26 +47,27 @@ public class HSTFeedConfigureImages extends BaseActivity {
 
 	public static final String TAG = "HSTFeedConfigureImages";
 
+	private Bitmap[] bmps;
 	private GridView grid;
 	private Button cancel, ok;
 	private ImageAdapter adapter;
 	private TextView header;
 
-	private int mode, appWidgetId, size;
-	private float ra, dec, area;
+	private int mode;
+	@SuppressWarnings("unused")
+	private Bundle widget;
+	// private float ra, dec, area;
 	private boolean edit;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.config_images);
-		size = getIntent().getIntExtra("size", HSTFeedService.SIZE_SMALL);
-		edit = getIntent().getBooleanExtra("edit", false);
-		ra = getIntent().getFloatExtra("ra", 0f);
-		dec = getIntent().getFloatExtra("dec", 0f);
-		area = getIntent().getFloatExtra("area", 0f);
 		appWidgetId = getIntent().getIntExtra("appWidgetId",
 				AppWidgetManager.INVALID_APPWIDGET_ID);
+		size = getIntent().getIntExtra("size", HSTFeedService.SIZE_SMALL);
+		edit = getIntent().getBooleanExtra("edit", false);
+		widget = getIntent().getBundleExtra("widget");
 		grid = (GridView) findViewById(R.id.images_grid);
 		cancel = (Button) findViewById(R.id.config_images_cancel);
 		ok = (Button) findViewById(R.id.config_images_go);
@@ -79,7 +80,6 @@ public class HSTFeedConfigureImages extends BaseActivity {
 				launchMenu(position);
 			}
 		});
-
 		cancel.setOnClickListener(new View.OnClickListener() {
 
 			@Override
@@ -97,38 +97,47 @@ public class HSTFeedConfigureImages extends BaseActivity {
 
 			@Override
 			public void onClick(View v) {
-				Intent updateIntent = new Intent(
-						AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+				Intent updateIntent = new Intent();
+				updateIntent
+						.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
 				updateIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,
 						appWidgetId);
-				if (updateIntent.resolveActivity(getPackageManager()) != null) {
-					startActivity(updateIntent);
-				}
+				getBaseContext().sendBroadcast(updateIntent);
 				setResult(RESULT_OK);
 				finish();
 			}
 		});
-
 		ImageDB db = ImageDB.getInstance(this);
 		Log.d(TAG, "edit mode=" + edit);
 		if (!edit) {
-			// create widget
+			// edit new images
 			ok.setEnabled(true);
-			db.createWidget(appWidgetId, HSTFeedConfigure.TYPE_LOCAL, 0, ra,
-					dec, area, 0);
-			// load images
+			// TODO load images from feed
 		} else {
-			// modify widget
+			// modify images
 			Bundle bundle = db.getWidgetImages(appWidgetId);
-			Bitmap[] bmps = (Bitmap[]) bundle.getParcelableArray("images");
-			adapter.clear();
-			for (Bitmap image : bmps) {
-				adapter.add(image);
-			}
-			if (adapter.getCount() > 0)
+			bmps = (Bitmap[]) bundle.getParcelableArray("images");
+			putBitmapsInAdapter(bmps, adapter);
+			if (bmps.length > 0)
 				header.setText(String.format(
 						getText(R.string.feed_images_count).toString(),
-						adapter.getCount()));
+						bmps.length));
+		}
+	}
+
+	/**
+	 * Copy bitmaps in the array to the image adapter.
+	 * 
+	 * @param bmps
+	 * @param adapter
+	 */
+	private void putBitmapsInAdapter(Bitmap[] bmps, ImageAdapter adapter) {
+		adapter.clear();
+		if (null == bmps) {
+			return;
+		}
+		for (Bitmap bmp : bmps) {
+			adapter.add(bmp);
 		}
 	}
 
@@ -137,9 +146,10 @@ public class HSTFeedConfigureImages extends BaseActivity {
 		grid.invalidate();
 		grid.invalidateViews();
 		// ok.setEnabled(adapter.getCount() > 0);
-		if (adapter.getCount() > 0)
+		if (adapter.getCount() > 0) {
 			header.setText(String.format(getText(R.string.feed_images_count)
 					.toString(), adapter.getCount()));
+		}
 		super.onResume();
 	}
 
@@ -151,12 +161,8 @@ public class HSTFeedConfigureImages extends BaseActivity {
 
 	@Override
 	protected void onRestoreInstanceState(Bundle savedInstanceState) {
-		Bitmap[] images = (Bitmap[]) savedInstanceState
-				.getParcelableArray("images");
-		adapter.clear();
-		for (Bitmap image : images) {
-			adapter.add(image);
-		}
+		bmps = (Bitmap[]) savedInstanceState.getParcelableArray("images");
+		putBitmapsInAdapter(bmps, adapter);
 		header.setText(String.format(getText(R.string.feed_images_count)
 				.toString(), adapter.getCount()));
 		super.onRestoreInstanceState(savedInstanceState);
@@ -200,7 +206,6 @@ public class HSTFeedConfigureImages extends BaseActivity {
 				grab.putExtra("outputY", dim);
 				grab.putExtra("noFaceDetection", true);
 				grab.putExtra("return-data", true);
-
 				startActivityForResult(grab, HSTFeedConfigure.REQUEST_IMAGES);
 				break;
 			}
@@ -219,18 +224,17 @@ public class HSTFeedConfigureImages extends BaseActivity {
 			setResult(RESULT_OK);
 			finish();
 		} else if (requestCode == 20 && resultCode == RESULT_OK) {
+			// from configure image options
 			int action = data.getIntExtra("action", -1);
 			int position = data.getIntExtra("position", -1);
 			if (position < 0) {
 				return;
 			}
 			ImageDB db = ImageDB.getInstance(this);
-			Bundle bundle;
-			Bitmap[] bmps;
 			switch (action) {
 			case HSTFeedConfigureImagesOptions.ACTION_DELETE:
-				adapter.deletePosition(position);
 				db.deleteImage(appWidgetId, position);
+				adapter.deletePosition(position);
 				if (adapter.getCount() > 0) {
 					header.setText(String.format(
 							getText(R.string.feed_images_count).toString(),
@@ -241,48 +245,48 @@ public class HSTFeedConfigureImages extends BaseActivity {
 				break;
 			case HSTFeedConfigureImagesOptions.ACTION_NEXT:
 				db.moveImage(appWidgetId, position, 1);
-				bundle = db.getWidgetImages(appWidgetId);
-				bmps = (Bitmap[]) bundle.getParcelableArray("images");
-				adapter.clear();
-				for (Bitmap image : bmps) {
-					adapter.add(image);
-				}
+				// update adapter
+				moveItemInAdapter(bmps, adapter, position, 1);
+				grid.invalidate();
 				break;
 			case HSTFeedConfigureImagesOptions.ACTION_PREV:
 				db.moveImage(appWidgetId, position, -1);
-				bundle = db.getWidgetImages(appWidgetId);
-				bmps = (Bitmap[]) bundle.getParcelableArray("images");
-				adapter.clear();
-				for (Bitmap image : bmps) {
-					adapter.add(image);
-				}
+				// update adapter
+				moveItemInAdapter(bmps, adapter, position, -1);
+				grid.invalidate();
 				break;
 			}
 			grid.invalidate();
 			grid.invalidateViews();
-		} else {
-			if (resultCode == RESULT_OK) {
-				// FIXME bound to overflow memory - ~1MiB limit!
-				Bitmap bitmap = (Bitmap) data.getParcelableExtra("data");
-				String fullUri = data.getStringExtra("fullUri");
-				String archvUri = data.getStringExtra("archvUri");
-				String name = data.getStringExtra("name");
-				String credits = data.getStringExtra("credits");
-				String creditsUri = data.getStringExtra("creditsUri");
-				String caption = data.getStringExtra("caption");
-				String captionUri = data.getStringExtra("captionUri");
-				ImageDB db = ImageDB.getInstance(this);
-				db.setWidgetCurrent(appWidgetId, (int) db.setImage(appWidgetId,
-						name, archvUri, fullUri, credits, creditsUri, caption,
-						captionUri, -1, bitmap));
-				adapter.add(bitmap);
-				header.setText(String.format(
-						getText(R.string.feed_images_count).toString(),
-						adapter.getCount()));
-			}
 		}
 	}
 
+	/**
+	 * Moves the position of the bitmap in array and adapter.
+	 * 
+	 * @param bitmaps
+	 * @param adapter
+	 * @param position
+	 * @param dir
+	 */
+	private void moveItemInAdapter(Bitmap[] bitmaps, ImageAdapter adapter,
+			int position, int dir) {
+		int imgCount = bitmaps.length;
+		int newPos = position + dir;
+		if (newPos > imgCount - 1 || newPos < 1) {
+			return;
+		}
+		Bitmap swap = bitmaps[newPos].copy(bitmaps[newPos].getConfig(),
+				bitmaps[newPos].isMutable());
+		bitmaps[newPos].recycle();
+		bitmaps[newPos] = bitmaps[position];
+		bitmaps[position] = swap;
+		putBitmapsInAdapter(bitmaps, adapter);
+	}
+
+	/**
+	 * @param position
+	 */
 	private void launchMenu(int position) {
 		Intent intent = new Intent(this, HSTFeedConfigureImagesOptions.class);
 		intent.putExtra("position", position);
