@@ -1,3 +1,9 @@
-HST Feed copyright 2014, Free Beachler
+HST Feed Images copyright 2014, Free Beachler, Longevity Software LLC
 
-PNG files in the "res/" folder may be licensed under different terms.  Custom iconography and imagery created by Free Beachler is the sole property of Free Beachler and such assets are covered under their own licensing terms.  The general license described in LICENSE.TXT and code files applies to all files in this project created by Free Beachler unless otherwise mentioned in this file, or another file in this project.  You are not to redistribute custom iconography and imagery used in this application without the express written consent of Free Beachler.
+The general license described in LICENSE.TXT and code files applies to all files in this project created by Free Beachler, Longevity Software LLC, unless specifically or categorically declared otherwise in this file or another file in this folder or a subfolder (in other words, this project).
+
+PNG files in the "res/" folder are considered application assets and are licensed under distinct terms separate from applicaton code.
+Custom iconography and imagery created by Free Beachler is the sole property of Free Beachler, Longevity Software LLC, copyright (c) 2014, Longevity Software LLC, all rights reserved.
+
+You may redistribute custom iconography, imagery, and application assets used in this application for personal purposes only.
+You may not redistribute custom iconography and imagery used in this application for commercial purposes without the express written consent of Free Beachler.
