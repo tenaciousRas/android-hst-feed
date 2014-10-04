@@ -137,8 +137,22 @@ public class HSTFeedService extends Service {
 		if (null == widget) {
 			return buildEmptyView(context, appWidgetId, size);
 		}
-		RemoteViews view = new RemoteViews(context.getPackageName(),
-				R.layout.widget_layout);
+		RemoteViews view;
+		switch (size) {
+		case SIZE_LARGE:
+			view = new RemoteViews(context.getPackageName(),
+					R.layout.widget_layout_lg);
+			break;
+		case SIZE_MEDIUM:
+			view = new RemoteViews(context.getPackageName(),
+					R.layout.widget_layout_med);
+			break;
+		case SIZE_SMALL:
+		default:
+			view = new RemoteViews(context.getPackageName(),
+					R.layout.widget_layout_sm);
+			break;
+		}
 		int current = widget.getInt(ImageDBUtil.WIDGETS_CURRENT);
 		float ra = widget.getFloat(ImageDBUtil.WIDGETS_RA);
 		float dec = widget.getFloat(ImageDBUtil.WIDGETS_DEC);
@@ -253,7 +267,7 @@ public class HSTFeedService extends Service {
 			if (insertCnt != null && insertCnt > 0 && appWidgetId > -1) {
 				int current = widget.getInt(ImageDBUtil.WIDGETS_CURRENT);
 				view = new RemoteViews(getBaseContext().getPackageName(),
-						R.layout.widget_layout);
+						R.layout.widget_layout_sm);
 				Bitmap dbbm = db.getImageBitmap(appWidgetId, current);
 				Bundle imgData = db.getImageMeta(appWidgetId, current);
 				if (imgData.getString(ImageDBUtil.IMAGES_FILEPATH) == null) {
@@ -374,9 +388,7 @@ public class HSTFeedService extends Service {
 				con.connect();
 				ret = parseMASTFeed(con.getInputStream());
 				con.disconnect();
-			} catch (MalformedURLException e) {
-				Log.e(TAG, Log.getStackTraceString(e));
-			} catch (IOException e) {
+			} catch (Exception e) {
 				Log.e(TAG, Log.getStackTraceString(e));
 			}
 			return ret;

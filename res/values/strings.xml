@@ -3,6 +3,7 @@
 
     <string name="app_name">HST Images Feed Widget</string>
     <string name="app_desc">HST Images Feed Widget is an Android Application that displays a slideshow of HST PR images from the MAST web service.</string>
+    <string name="app_creator">Created by Free Beachler, Longevity Software LLC</string>
     <!-- labels -->
     <string name="widget_sm">HST Feed (Small)</string>
     <string name="widget_med">HST Feed (Medium)</string>
@@ -23,6 +24,7 @@
     <string name="randomize">Randomize R.A., Dec., and Area</string>
     <string name="configure_hst">Configure HST Images Feed Widget</string>
     <string name="configure_widget">Configure Widget</string>
+    <string name="widget_info">Widget Info</string>
     <string name="view_fullsize">View Full Image</string>
     <string name="next_image">Next Image</string>
     <string name="prev_image">Prev Image</string>
@@ -48,5 +50,27 @@
     <string name="sym_degree">&#xf8;</string>
     <!-- content desc -->
     <string name="cdesc_hst_img">HST Image</string>
+    <string name="cdesc_lsoft_logo">company logo, Longevity Software LLC</string>
+    <!-- HTML -->
+    <string name="widget_info_content">&lt;h5&gt;This is not official MAST software.  This application is neither created, nor published, nor endorsed by MAST, NASA, JPL, ESA, or any of the data providers mentioned herein and in captions.&lt;/h5&gt;
+	&lt;p&gt;HST Images Feed Widget images and data presented in this application is obtained from the Mikulski Archive for Space Telescopes (MAST). STScI is operated by the Association of Universities for Research in Astronomy, Inc., under NASA contract NAS5-26555. Support for MAST for non-HST data is provided by the NASA Office of Space Science via grant NNX13AC07G and by other grants and contracts.&lt;/p&gt;
+	&lt;p&gt;The Hubble Space Telescope graphic used in HST Images Feed Widget is courtesy of NASA/JPL.&lt;/p&gt;
+	&lt;p&gt;All Android iconography, graphics, and images (in other words, all the imagery not cited above) are copyright &#169; 2014 Longevity Software LLC, all rights reserved.&lt;/p&gt;
+	&lt;blockquote&gt;
+	&lt;pre&gt;
+HSTFeed is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+This application is distributed under the Creative Commons Non-Commercial License.
+You are free to share and remix the application, but you must include credit to the original creator Free Beachler, Longevity Software LLC.
+You may not use this work for commercial purposes.  You agree to use this work in a manner that does not conflict 
+with the HST Images Feed Widget also known by the aliases HSTFeed Images, HSTFeed Images for Android.  If you alter, transform, or 
+build upon this work, you may distribute the resulting work only under the same or newer version of this license.
+
+You should have received a copy of the Creative Commons Non-Commercial
+License along with HSTFeed.  If not, see &lt;a href=&quot;http://creativecommons.org/licenses/by-nc-sa/3.0/&quot;&gt;http://creativecommons.org/licenses/by-nc-sa/3.0/&lt;/a&gt;.
+	&lt;/pre&gt;
+	&lt;/blockquote&gt;</string>
 
 </resources>

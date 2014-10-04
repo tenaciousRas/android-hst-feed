@@ -17,7 +17,7 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
         <receiver
-            android:name=".appwidget.HSTFeed"
+            android:name=".appwidget.HSTFeedSm"
             android:label="@string/widget_sm" >
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" >
@@ -29,14 +29,71 @@
                 android:resource="@xml/widget_sm" >
             </meta-data>
         </receiver>
+        <receiver
+            android:name=".appwidget.HSTFeedMed"
+            android:label="@string/widget_med" >
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" >
+                </action>
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_med" >
+            </meta-data>
+        </receiver>
+        <receiver
+            android:name=".appwidget.HSTFeedLg"
+            android:label="@string/widget_lg" >
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" >
+                </action>
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_lg" >
+            </meta-data>
+        </receiver>
 
         <activity
-            android:name=".activity.HSTFeedConfigure"
+            android:name=".activity.HSTFeedConfigureSm"
             android:label="@string/configure_hst" >
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" >
                 </action>
             </intent-filter>
+
+            <meta-data
+                android:name="size"
+                android:value="0" >
+            </meta-data>
+        </activity>
+        <activity
+            android:name=".activity.HSTFeedConfigureMed"
+            android:label="@string/configure_hst" >
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" >
+                </action>
+            </intent-filter>
+
+            <meta-data
+                android:name="size"
+                android:value="1" >
+            </meta-data>
+        </activity>
+        <activity
+            android:name=".activity.HSTFeedConfigureLg"
+            android:label="@string/configure_hst" >
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" >
+                </action>
+            </intent-filter>
+
+            <meta-data
+                android:name="size"
+                android:value="2" >
+            </meta-data>
         </activity>
         <activity
             android:name=".activity.HSTFeedConfigureImages"
@@ -52,6 +109,9 @@
             android:theme="@android:style/Theme.Dialog" />
         <activity
             android:name=".activity.HSTFeedFullsizeDisplay"
+            android:excludeFromRecents="true" />
+        <activity
+            android:name=".activity.HSTFeedWidgetInfo"
             android:excludeFromRecents="true" />
 
         <service android:name=".service.HSTFeedService" />

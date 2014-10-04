@@ -174,7 +174,7 @@ public class HSTFeedConfigureImages extends BaseActivity {
 		MenuInflater inflater = getMenuInflater();
 		menu.clear();
 		switch (mode) {
-		case HSTFeedConfigure.TYPE_LOCAL:
+		case HSTFeedConfigureBase.TYPE_LOCAL:
 			inflater.inflate(R.menu.load_feed_images, menu);
 			break;
 		}
@@ -195,7 +195,7 @@ public class HSTFeedConfigureImages extends BaseActivity {
 			dim = 400;
 			break;
 		}
-		if (mode == HSTFeedConfigure.TYPE_LOCAL) {
+		if (mode == HSTFeedConfigureBase.TYPE_LOCAL) {
 			switch (item.getItemId()) {
 			case R.id.load_feed_images:
 				Intent grab = new Intent(Intent.ACTION_GET_CONTENT, null);
@@ -207,7 +207,7 @@ public class HSTFeedConfigureImages extends BaseActivity {
 				grab.putExtra("outputY", dim);
 				grab.putExtra("noFaceDetection", true);
 				grab.putExtra("return-data", true);
-				startActivityForResult(grab, HSTFeedConfigure.REQUEST_IMAGES);
+				startActivityForResult(grab, HSTFeedConfigureBase.REQUEST_IMAGES);
 				break;
 			}
 		}

@@ -97,7 +97,9 @@ public class HSTFeedFullsizeDisplay extends BaseActivity {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see com.longevitysoft.android.appwidget.hstfeed.activity.BaseActivity#onResume()
+	 * @see
+	 * com.longevitysoft.android.appwidget.hstfeed.activity.BaseActivity#onResume
+	 * ()
 	 */
 	@Override
 	protected void onResume() {
@@ -106,7 +108,7 @@ public class HSTFeedFullsizeDisplay extends BaseActivity {
 		Bitmap dbbm = db.getImageBitmap(appWidgetId, imageId);
 		DisplayMetrics metrics = getBaseContext().getResources()
 				.getDisplayMetrics();
-		if (null != metrics) {
+		if (null != metrics && null != dbbm) {
 			int scW = metrics.widthPixels;
 			float imgRatio = ((float) dbbm.getHeight() / (float) dbbm
 					.getWidth());

@@ -53,13 +53,16 @@ public class HSTFeedWidgetTouchOptions extends BaseActivity implements
 
 		protected int mode = 0; // 0 for partial items, 1 for full items
 
-		protected String[] items_config_widget = { getString(R.string.configure_widget) };
+		protected String[] items_config_widget = {
+				getString(R.string.configure_widget),
+				getString(R.string.widget_info) };
 
 		protected String[] items_config_all = {
 				getString(R.string.view_fullsize),
 				getString(R.string.next_image),
 				getString(R.string.edit_images),
-				getString(R.string.configure_widget) };
+				getString(R.string.configure_widget),
+				getString(R.string.widget_info) };
 
 		private LayoutInflater mInflate;
 
@@ -133,19 +136,41 @@ public class HSTFeedWidgetTouchOptions extends BaseActivity implements
 			long id) {
 		Intent configIntent = null;
 		if (null == imageData) {
-			// configure widget
-			Log.d(TAG, "config widget");
-			configIntent = new Intent(this, HSTFeedConfigure.class);
-			configIntent.putExtra("appWidgetId", appWidgetId);
-			configIntent.putExtra("size", size);
-			if (null == widget) {
-				configIntent.putExtra("edit", false);
-			} else {
-				configIntent.putExtra("edit", true);
+			switch (position) {
+			case 0:
+				// configure widget
+				Log.d(TAG, "config widget");
+				switch (size) {
+				case HSTFeedService.SIZE_LARGE:
+					configIntent = new Intent(this, HSTFeedConfigureLg.class);
+					break;
+				case HSTFeedService.SIZE_MEDIUM:
+					configIntent = new Intent(this, HSTFeedConfigureMed.class);
+					break;
+				case HSTFeedService.SIZE_SMALL:
+				default:
+					configIntent = new Intent(this, HSTFeedConfigureSm.class);
+					break;
+				}
+				configIntent.putExtra("appWidgetId", appWidgetId);
+				configIntent.putExtra("size", size);
+				if (null == widget) {
+					configIntent.putExtra("edit", false);
+				} else {
+					configIntent.putExtra("edit", true);
+				}
+				configIntent.putExtra("widget", widget);
+				startActivity(configIntent);
+				finish();
+				break;
+			case 1:
+				// widget info
+				Log.d(TAG, "widget info");
+				configIntent = new Intent(this, HSTFeedWidgetInfo.class);
+				startActivity(configIntent);
+				finish();
+				break;
 			}
-			configIntent.putExtra("widget", widget);
-			startActivity(configIntent);
-			finish();
 		} else {
 			switch (position) {
 			case 0:
@@ -185,7 +210,18 @@ public class HSTFeedWidgetTouchOptions extends BaseActivity implements
 			case 3:
 				// configure widget
 				Log.d(TAG, "config widget");
-				configIntent = new Intent(this, HSTFeedConfigure.class);
+				switch (size) {
+				case HSTFeedService.SIZE_LARGE:
+					configIntent = new Intent(this, HSTFeedConfigureLg.class);
+					break;
+				case HSTFeedService.SIZE_MEDIUM:
+					configIntent = new Intent(this, HSTFeedConfigureMed.class);
+					break;
+				case HSTFeedService.SIZE_SMALL:
+				default:
+					configIntent = new Intent(this, HSTFeedConfigureSm.class);
+					break;
+				}
 				configIntent.putExtra("appWidgetId", appWidgetId);
 				configIntent.putExtra("size", size);
 				configIntent.putExtra("edit", true);
@@ -193,6 +229,12 @@ public class HSTFeedWidgetTouchOptions extends BaseActivity implements
 				startActivity(configIntent);
 				finish();
 				break;
+			case 4:
+				// widget info
+				Log.d(TAG, "widget info");
+				configIntent = new Intent(this, HSTFeedWidgetInfo.class);
+				startActivity(configIntent);
+				finish();
 			}
 		}
 	}

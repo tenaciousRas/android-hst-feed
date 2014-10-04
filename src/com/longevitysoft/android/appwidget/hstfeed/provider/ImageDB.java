@@ -189,43 +189,58 @@ public class ImageDB extends SQLiteOpenHelper {
 			int updates = widget.getInt(ImageDBUtil.WIDGETS_UPDATES);
 			int current = widget.getInt(ImageDBUtil.WIDGETS_CURRENT);
 			long lastupdate = widget.getLong(ImageDBUtil.WIDGETS_LASTUPDATE);
-			if (c == null) {
+			if (null == c) {
 				return true;
 			}
-			if (c.getCount() == 0) {
+			if (0 == c.getCount()) {
 				c.close();
 				return true;
 			}
+			int idx = 0;
 			if (c.moveToFirst() && c.getCount() > 1) {
 				c.moveToLast();
-				if (c.getInt(c.getColumnIndex(ImageDBUtil.IMAGES_ID)) == current) {
+				idx = c.getColumnIndex(ImageDBUtil.IMAGES_ID);
+				if (c.getInt(idx) == current) {
 					updates = 1;
 					if (c.moveToFirst()) {
-						current = c.getInt(c
-								.getColumnIndex(ImageDBUtil.IMAGES_ID));
+						if (-1 < idx && idx <= c.getColumnCount()) {
+							current = c.getInt(idx);
+						}
 					}
 				} else {
 					updates++;
+					idx = c.getColumnIndex(ImageDBUtil.IMAGES_ID);
 					if (widget.getInt(ImageDBUtil.WIDGETS_ORDER) == 1) {
 						Random rand = new Random();
 						int oldCurrent = current;
+						c.moveToFirst();
 						do {
 							current = rand.nextInt(c.getCount());
-							c.moveToFirst();
-							c.move(current - 1);
-							current = c.getInt(c
-									.getColumnIndex(ImageDBUtil.IMAGES_ID));
+							if (!c.move(current - 1)) {
+								break;
+							}
+							if (0 > idx || idx <= c.getColumnCount()) {
+								current = c.getInt(idx);
+							}
 						} while (current == oldCurrent);
 					} else {
 						c.moveToFirst();
 						do {
-							if (c.getInt(c
-									.getColumnIndex(ImageDBUtil.IMAGES_ID)) > current) {
+							if (0 > idx || idx >= c.getColumnCount()) {
+								continue;
+							}
+							if (c.getInt(idx) > current) {
 								break;
 							}
 						} while (c.moveToNext());
-						current = c.getInt(c
-								.getColumnIndex(ImageDBUtil.IMAGES_ID));
+						if (-1 < idx && idx <= c.getColumnCount()) {
+							// another AOSP mystery!
+							// AOSP complains that index out of bounds,
+							// requested index 2 with size 2. makes no sense.
+							// happens intermittently. may happen after
+							// onTerminate called on app.
+							current = c.getInt(idx);
+						}
 					}
 				}
 			}
@@ -277,7 +292,7 @@ public class ImageDB extends SQLiteOpenHelper {
 					new String[] { ImageDBUtil.IMAGES_WEIGHT },
 					ImageDBUtil.IMAGES_WIDGETID + " = " + appWidgetId, null,
 					null, null, ImageDBUtil.IMAGES_WEIGHT);
-			if (c == null || c.getCount() < 1) {
+			if (null == c || c.getCount() < 1) {
 				weight = 0;
 			} else {
 				c.moveToLast();
@@ -364,7 +379,7 @@ public class ImageDB extends SQLiteOpenHelper {
 				ImageDBUtil.IMAGES_ID, ImageDBUtil.IMAGES_FILEPATH,
 				ImageDBUtil.IMAGES_WEIGHT }, whereClause, whereArgs, null,
 				null, ImageDBUtil.IMAGES_WEIGHT);
-		if (c == null) {
+		if (null == c) {
 			return bitmap;
 		}
 		if (c.moveToFirst()) {
@@ -389,7 +404,7 @@ public class ImageDB extends SQLiteOpenHelper {
 				ImageDBUtil.IMAGES_ID, ImageDBUtil.IMAGES_FILEPATH,
 				ImageDBUtil.IMAGES_WEIGHT }, whereClause, whereArgs, null,
 				null, ImageDBUtil.IMAGES_WEIGHT);
-		if (c == null) {
+		if (null == c) {
 			return baos;
 		}
 		if (c.moveToFirst()) {
@@ -437,7 +452,7 @@ public class ImageDB extends SQLiteOpenHelper {
 				ImageDBUtil.IMAGES_CREDITS_URI, ImageDBUtil.IMAGES_FILEPATH },
 				whereClause, whereArgs, null, null, ImageDBUtil.IMAGES_WEIGHT);
 		Bundle bundle = new Bundle();
-		if (c == null) {
+		if (null == c) {
 			return bundle;
 		}
 		if (c.moveToFirst()) {
@@ -475,6 +490,25 @@ public class ImageDB extends SQLiteOpenHelper {
 		String whereClause = ImageDBUtil.IMAGES_WIDGETID + " = ?";
 		String[] whereArgs = new String[] { Integer.toString(appWidgetId) };
 		whereClause = ImageDBUtil.IMAGES_WIDGETID + " = ?";
+		Cursor c = db.query(ImageDBUtil.TABLE_IMAGES,
+				new String[] { ImageDBUtil.IMAGES_ID }, whereClause, whereArgs,
+				null, null, ImageDBUtil.IMAGES_WEIGHT);
+		if (null == c || 0 == c.getCount()) {
+			return;
+		}
+		c.moveToFirst();
+		do {
+			int id = c.getInt(c.getColumnIndex(ImageDBUtil.IMAGES_ID));
+			// delete file
+			try {
+				File f = new File(buildImgFilePath(appWidgetId, id));
+				f.delete();
+			} catch (Exception e) {
+				Log.w(TAG,
+						"exception while attempting to delete image from cache, exception was"
+								+ Log.getStackTraceString(e));
+			}
+		} while (c.moveToNext());
 		db.delete(ImageDBUtil.TABLE_IMAGES, whereClause, whereArgs);
 	}
 
@@ -487,8 +521,8 @@ public class ImageDB extends SQLiteOpenHelper {
 		String[] whereArgs = new String[] { Integer.toString(appWidgetId) };
 		Cursor c = db.query(ImageDBUtil.TABLE_IMAGES,
 				new String[] { ImageDBUtil.IMAGES_ID }, whereClause, whereArgs,
-				null, null, null, ImageDBUtil.IMAGES_WEIGHT);
-		if (c == null) {
+				null, null, ImageDBUtil.IMAGES_WEIGHT);
+		if (null == c) {
 			return;
 		}
 		if (c.moveToFirst()) {
@@ -498,9 +532,19 @@ public class ImageDB extends SQLiteOpenHelper {
 					break;
 				i++;
 			}
+			// delete from DB
 			int id = c.getInt(c.getColumnIndex(ImageDBUtil.IMAGES_ID));
 			db.delete(ImageDBUtil.TABLE_IMAGES, ImageDBUtil.IMAGES_ID + " = "
 					+ id, null);
+			// delete file
+			try {
+				File f = new File(buildImgFilePath(appWidgetId, id));
+				f.delete();
+			} catch (Exception e) {
+				Log.w(TAG,
+						"exception while attempting to delete image from cache, exception was"
+								+ Log.getStackTraceString(e));
+			}
 		}
 		c.close();
 	}
@@ -519,7 +563,7 @@ public class ImageDB extends SQLiteOpenHelper {
 		Cursor c = db.query(ImageDBUtil.TABLE_IMAGES, new String[] {
 				ImageDBUtil.IMAGES_ID, ImageDBUtil.IMAGES_WEIGHT },
 				whereClause, whereArgs, null, null, ImageDBUtil.IMAGES_WEIGHT);
-		if (c == null) {
+		if (null == c) {
 			return;
 		}
 		if (position >= (c.getCount() - 1) && direction > 0) {
@@ -581,7 +625,7 @@ public class ImageDB extends SQLiteOpenHelper {
 				ImageDBUtil.WIDGETS_UPDATES }, whereClause, whereArgs, null,
 				null, null);
 		Bundle bundle = null;
-		if (c == null) {
+		if (null == c) {
 			return bundle;
 		}
 		if (c.moveToFirst()) {

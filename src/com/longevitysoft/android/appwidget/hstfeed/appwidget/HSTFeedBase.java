@@ -35,19 +35,21 @@ import android.util.Log;
  * @author fbeachler
  * 
  */
-public class HSTFeed extends AppWidgetProvider {
+public abstract class HSTFeedBase extends AppWidgetProvider {
 	public static final String TAG = "HSTFeed";
+
+	public abstract int getSize();
 
 	@Override
 	public void onUpdate(Context context, AppWidgetManager appWidgetManager,
 			int[] appWidgetIds) {
 		if (appWidgetIds == null) {
 			appWidgetIds = appWidgetManager.getAppWidgetIds(new ComponentName(
-					context, HSTFeed.class));
+					context, HSTFeedBase.class));
 		}
 		for (int appWidgetId : appWidgetIds) {
 			Intent intent = new Intent(context, HSTFeedService.class);
-			intent.putExtra("size", HSTFeedService.SIZE_SMALL);
+			intent.putExtra("size", getSize());
 			intent.putExtra("appWidgetId", appWidgetId);
 			context.startService(intent);
 		}

@@ -31,13 +31,12 @@ import android.widget.EditText;
 
 import com.longevitysoft.android.appwidget.hstfeed.R;
 import com.longevitysoft.android.appwidget.hstfeed.provider.ImageDB;
-import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService;
 
 /**
  * @author fbeachler
  * 
  */
-public class HSTFeedConfigure extends BaseActivity {
+public abstract class HSTFeedConfigureBase extends BaseActivity {
 
 	public static final int REQUEST_FEED = 1;
 	public static final int REQUEST_LOCAL = 2;
@@ -55,6 +54,8 @@ public class HSTFeedConfigure extends BaseActivity {
 	private Float origRa, origDec, origArea;
 	private Bundle widget;
 
+	protected abstract void readSizeFromIntent(Intent intent);
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -63,8 +64,7 @@ public class HSTFeedConfigure extends BaseActivity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.config_widget);
-		size = getIntent().getIntExtra("size", HSTFeedService.SIZE_SMALL);
+		readSizeFromIntent(getIntent());
 		appWidgetId = getIntent().getIntExtra(
 				AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
 		if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
@@ -81,6 +81,7 @@ public class HSTFeedConfigure extends BaseActivity {
 			origDec = widget.getFloat("dec", -1f);
 			origArea = widget.getFloat("area", -1f);
 		}
+		setContentView(R.layout.config_widget);
 		ra = (EditText) findViewById(R.id.search_ra);
 		dec = (EditText) findViewById(R.id.search_dec);
 		area = (EditText) findViewById(R.id.search_area);
@@ -99,7 +100,7 @@ public class HSTFeedConfigure extends BaseActivity {
 
 			@Override
 			public void onClick(View v) {
-				Intent intent = new Intent(HSTFeedConfigure.this,
+				Intent intent = new Intent(HSTFeedConfigureBase.this,
 						HSTFeedConfigureImages.class);
 				intent.putExtra("appWidgetId", appWidgetId);
 				intent.putExtra("size", size);
@@ -128,8 +129,9 @@ public class HSTFeedConfigure extends BaseActivity {
 				widget.putFloat("area", fVal);
 				if (!edit) {
 					// store widget
-					db.createWidget(appWidgetId, HSTFeedConfigure.TYPE_LOCAL,
-							0, widget.getFloat("ra", 0f),
+					db.createWidget(appWidgetId,
+							HSTFeedConfigureBase.TYPE_LOCAL, 0,
+							widget.getFloat("ra", 0f),
 							widget.getFloat("dec", 0f),
 							widget.getFloat("area", 0f), 0);
 				} else {
@@ -139,7 +141,7 @@ public class HSTFeedConfigure extends BaseActivity {
 				}
 				if (!origRa.equals(widget.getFloat("ra"))
 						|| !origDec.equals(widget.getFloat("dec"))
-						|| !origRa.equals(widget.getFloat("area"))) {
+						|| !origArea.equals(widget.getFloat("area"))) {
 					db.deleteAllImages(appWidgetId);
 				}
 				// launch next activity
@@ -152,7 +154,9 @@ public class HSTFeedConfigure extends BaseActivity {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see com.longevitysoft.android.appwidget.hstfeed.activity.BaseActivity#onResume()
+	 * @see
+	 * com.longevitysoft.android.appwidget.hstfeed.activity.BaseActivity#onResume
+	 * ()
 	 */
 	@Override
 	protected void onResume() {
