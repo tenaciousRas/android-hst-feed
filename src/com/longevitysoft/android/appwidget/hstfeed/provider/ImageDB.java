@@ -27,8 +27,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.Random;
 
-import com.longevitysoft.android.appwidget.hstfeed.Constants;
-
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -37,9 +35,12 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
+import android.graphics.BitmapFactory.Options;
 import android.os.Bundle;
 import android.text.format.Time;
 import android.util.Log;
+
+import com.longevitysoft.android.appwidget.hstfeed.Constants;
 
 /**
  * @author fbeachler
@@ -359,7 +360,14 @@ public class ImageDB extends SQLiteOpenHelper {
 		if (bitmap == null) {
 			return -1;
 		}
-		Bitmap bmp = BitmapFactory.decodeByteArray(bitmap, 0, bitmap.length);
+		Options opts = new Options();
+		opts.inDither = true;
+		opts.inJustDecodeBounds = false;
+		opts.inInputShareable = true;
+		// opts.inPreferQualityOverSpeed = true;
+		opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
+		Bitmap bmp = BitmapFactory.decodeByteArray(bitmap, 0, bitmap.length,
+				opts);
 		return setImage(appWidgetId, name, archvUri, fullUri, credits,
 				creditsUri, caption, captionUri, weight, bmp);
 	}
@@ -671,11 +679,24 @@ public class ImageDB extends SQLiteOpenHelper {
 		Bundle ret = new Bundle();
 		Bitmap[] bmps = new Bitmap[0];
 		if (c.moveToFirst()) {
+			Options opts = new Options();
+			opts.inDither = true;
+			opts.inJustDecodeBounds = false;
+			opts.inPurgeable = true;
+			// opts.inPreferQualityOverSpeed = false;
+			opts.inSampleSize = 4;
+			opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
 			bmps = new Bitmap[c.getCount()];
 			for (int i = 0; i < bmps.length; i++) {
 				String bitmapFilepath = c.getString(c
 						.getColumnIndex(ImageDBUtil.IMAGES_FILEPATH));
-				bmps[i] = BitmapFactory.decodeFile(bitmapFilepath);
+				try {
+					bmps[i] = BitmapFactory.decodeFile(bitmapFilepath, opts);
+				} catch (Exception e) {
+					Log.d(TAG,
+							"failed to load HST images from storage, exception was:\n"
+									+ Log.getStackTraceString(e));
+				}
 				c.moveToNext();
 			}
 		}

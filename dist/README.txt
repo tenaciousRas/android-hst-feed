@@ -1,0 +1,1 @@
+This folder is a placeholder for distribution releases.  APKs for this project are distributed through Google Play.  To install an APK for this project without Google Play you will need to compile the project in your own workspace.

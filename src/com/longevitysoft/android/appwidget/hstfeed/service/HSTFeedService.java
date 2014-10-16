@@ -110,9 +110,9 @@ public class HSTFeedService extends Service {
 		if (AppWidgetManager.INVALID_APPWIDGET_ID == appWidgetId) {
 			return;
 		}
-		manager = AppWidgetManager.getInstance(this);
 		int size = intent.getIntExtra("size", SIZE_SMALL);
 		RemoteViews update = buildRemoteViews(this, appWidgetId, size);
+		manager = AppWidgetManager.getInstance(this);
 		manager.updateAppWidget(appWidgetId, update);
 	}
 
@@ -307,6 +307,9 @@ public class HSTFeedService extends Service {
 			}
 			if (null != view) {
 				// update widget
+				if (null == manager) {
+					manager = AppWidgetManager.getInstance(HSTFeedService.this);
+				}
 				manager.updateAppWidget(appWidgetId, view);
 			}
 			downloadInProgress = false;
