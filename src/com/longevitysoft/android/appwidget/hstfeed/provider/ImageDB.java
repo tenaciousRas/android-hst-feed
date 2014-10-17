@@ -25,7 +25,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
+import java.util.Vector;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -40,7 +43,8 @@ import android.os.Bundle;
 import android.text.format.Time;
 import android.util.Log;
 
-import com.longevitysoft.android.appwidget.hstfeed.Constants;
+import com.longevitysoft.android.appwidget.hstfeed.service.HSTImage;
+import com.longevitysoft.android.appwidget.hstfeed.util.HSTFeedUtil;
 
 /**
  * @author fbeachler
@@ -49,8 +53,6 @@ import com.longevitysoft.android.appwidget.hstfeed.Constants;
 public class ImageDB extends SQLiteOpenHelper {
 
 	public static final String TAG = "ImageDB";
-
-	private static final String CACHE_SUBDIR = "/imgcache";
 
 	private static final String DB_NAME = "hstfeed_images.db";
 	private static final int DB_VERSION = 1;
@@ -198,20 +200,19 @@ public class ImageDB extends SQLiteOpenHelper {
 				return true;
 			}
 			int idx = 0;
-			if (c.moveToFirst() && c.getCount() > 1) {
+			if (c.moveToFirst() && 1 < c.getCount()) {
+				updates++;
 				c.moveToLast();
 				idx = c.getColumnIndex(ImageDBUtil.IMAGES_ID);
 				if (c.getInt(idx) == current) {
-					updates = 1;
+					// current image is last image, loop to first
 					if (c.moveToFirst()) {
-						if (-1 < idx && idx <= c.getColumnCount()) {
-							current = c.getInt(idx);
-						}
+						current = c.getInt(idx);
 					}
 				} else {
-					updates++;
-					idx = c.getColumnIndex(ImageDBUtil.IMAGES_ID);
+					// current image is not last image
 					if (widget.getInt(ImageDBUtil.WIDGETS_ORDER) == 1) {
+						// random ordering
 						Random rand = new Random();
 						int oldCurrent = current;
 						c.moveToFirst();
@@ -220,11 +221,10 @@ public class ImageDB extends SQLiteOpenHelper {
 							if (!c.move(current - 1)) {
 								break;
 							}
-							if (0 > idx || idx <= c.getColumnCount()) {
-								current = c.getInt(idx);
-							}
+							current = c.getInt(idx);
 						} while (current == oldCurrent);
 					} else {
+						// linear ordering
 						c.moveToFirst();
 						do {
 							if (0 > idx || idx >= c.getColumnCount()) {
@@ -234,14 +234,7 @@ public class ImageDB extends SQLiteOpenHelper {
 								break;
 							}
 						} while (c.moveToNext());
-						if (-1 < idx && idx <= c.getColumnCount()) {
-							// another AOSP mystery!
-							// AOSP complains that index out of bounds,
-							// requested index 2 with size 2. makes no sense.
-							// happens intermittently. may happen after
-							// onTerminate called on app.
-							current = c.getInt(idx);
-						}
+						current = c.getInt(idx);
 					}
 				}
 			}
@@ -315,7 +308,7 @@ public class ImageDB extends SQLiteOpenHelper {
 		values.put(ImageDBUtil.IMAGES_CAPTION_URI, captionUri);
 		long rowId = db.insert(ImageDBUtil.TABLE_IMAGES, null, values);
 		FileOutputStream fos;
-		String outFP = buildImgFilePath(appWidgetId, rowId);
+		String outFP = HSTFeedUtil.buildImgFilePath(appWidgetId, rowId, ctx);
 		File f = new File(outFP);
 		try {
 			fos = new FileOutputStream(f);
@@ -364,12 +357,53 @@ public class ImageDB extends SQLiteOpenHelper {
 		opts.inDither = true;
 		opts.inJustDecodeBounds = false;
 		opts.inInputShareable = true;
-		// opts.inPreferQualityOverSpeed = true;
 		opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
 		Bitmap bmp = BitmapFactory.decodeByteArray(bitmap, 0, bitmap.length,
 				opts);
 		return setImage(appWidgetId, name, archvUri, fullUri, credits,
 				creditsUri, caption, captionUri, weight, bmp);
+	}
+
+	/**
+	 * Get dimension of cached image. Call this before calling {@link
+	 * this#getImageBitmap(int, int, int)} to calculate proper sample
+	 * widgetSize.
+	 * 
+	 * @param appWidgetId
+	 * @param imgId
+	 * @return vector with elements representing bounds. Element 0 = width.
+	 *         Element 1 = height. Or empty vector if bounds could not be
+	 *         retrieved.
+	 */
+	public Vector<Integer> getImageBitmapBounds(int appWidgetId, int imgId) {
+		Bitmap bitmap = null;
+		Vector<Integer> bounds = new Vector<Integer>(2);
+		String whereClause = ImageDBUtil.IMAGES_ID + " = ?";
+		String[] whereArgs = new String[] { Integer.toString(imgId) };
+		Cursor c = db.query(ImageDBUtil.TABLE_IMAGES, new String[] {
+				ImageDBUtil.IMAGES_ID, ImageDBUtil.IMAGES_FILEPATH,
+				ImageDBUtil.IMAGES_WEIGHT }, whereClause, whereArgs, null,
+				null, ImageDBUtil.IMAGES_WEIGHT);
+		if (null == c) {
+			return bounds;
+		}
+		if (c.moveToFirst()) {
+			String bitmapFilepath = c.getString(c
+					.getColumnIndex(ImageDBUtil.IMAGES_FILEPATH));
+			Options opts = new Options();
+			opts.inDither = true;
+			opts.inJustDecodeBounds = true;
+			opts.inPurgeable = true;
+			opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
+			bitmap = BitmapFactory.decodeFile(bitmapFilepath);
+			if (null == bitmap) {
+				return bounds;
+			}
+			bounds.add(bitmap.getWidth());
+			bounds.add(bitmap.getHeight());
+		}
+		c.close();
+		return bounds;
 	}
 
 	/**
@@ -379,7 +413,7 @@ public class ImageDB extends SQLiteOpenHelper {
 	 * @param imgId
 	 * @return
 	 */
-	public Bitmap getImageBitmap(int appWidgetId, int imgId) {
+	public Bitmap getImageBitmap(int appWidgetId, int imgId, int bmpSampleSize) {
 		Bitmap bitmap = null;
 		String whereClause = ImageDBUtil.IMAGES_ID + " = ?";
 		String[] whereArgs = new String[] { Integer.toString(imgId) };
@@ -390,6 +424,12 @@ public class ImageDB extends SQLiteOpenHelper {
 		if (null == c) {
 			return bitmap;
 		}
+		Options opts = new Options();
+		opts.inDither = true;
+		opts.inJustDecodeBounds = false;
+		opts.inPurgeable = true;
+		opts.inSampleSize = bmpSampleSize;
+		opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
 		if (c.moveToFirst()) {
 			String bitmapFilepath = c.getString(c
 					.getColumnIndex(ImageDBUtil.IMAGES_FILEPATH));
@@ -509,7 +549,8 @@ public class ImageDB extends SQLiteOpenHelper {
 			int id = c.getInt(c.getColumnIndex(ImageDBUtil.IMAGES_ID));
 			// delete file
 			try {
-				File f = new File(buildImgFilePath(appWidgetId, id));
+				File f = new File(HSTFeedUtil.buildImgFilePath(appWidgetId, id,
+						ctx));
 				f.delete();
 			} catch (Exception e) {
 				Log.w(TAG,
@@ -546,7 +587,8 @@ public class ImageDB extends SQLiteOpenHelper {
 					+ id, null);
 			// delete file
 			try {
-				File f = new File(buildImgFilePath(appWidgetId, id));
+				File f = new File(HSTFeedUtil.buildImgFilePath(appWidgetId, id,
+						ctx));
 				f.delete();
 			} catch (Exception e) {
 				Log.w(TAG,
@@ -669,7 +711,41 @@ public class ImageDB extends SQLiteOpenHelper {
 	 * @param appWidgetId
 	 * @return
 	 */
-	public Bundle getWidgetImages(int appWidgetId) {
+	public Integer getWidgetPreviousImage(int appWidgetId, int current) {
+		String whereClause = ImageDBUtil.IMAGES_WIDGETID + " = ?";
+		String[] whereArgs = new String[] { Integer.toString(appWidgetId) };
+		Cursor c = db.query(ImageDBUtil.TABLE_IMAGES, new String[] {
+				ImageDBUtil.IMAGES_ID, ImageDBUtil.IMAGES_WEIGHT },
+				whereClause, whereArgs, null, null, ImageDBUtil.IMAGES_WEIGHT);
+		Integer ret = null;
+		Integer prevId = null;
+		if (c.moveToFirst()) {
+			do {
+				if (c.getInt(c.getColumnIndex(ImageDBUtil.IMAGES_ID)) == current) {
+					if (null == prevId) {
+						// prev image at end of cursor
+						c.moveToLast();
+						ret = c.getInt(c.getColumnIndex(ImageDBUtil.IMAGES_ID));
+					} else {
+						ret = prevId;
+					}
+					break; // got id, exit loop
+				} else {
+					prevId = c.getInt(c.getColumnIndex(ImageDBUtil.IMAGES_ID));
+				}
+			} while (c.moveToNext());
+		}
+		if (null != c) {
+			c.close();
+		}
+		return ret;
+	}
+
+	/**
+	 * @param appWidgetId
+	 * @return
+	 */
+	public Bundle getWidgetImages(int appWidgetId, int bmpSampleSize) {
 		String whereClause = ImageDBUtil.IMAGES_WIDGETID + " = ?";
 		String[] whereArgs = new String[] { Integer.toString(appWidgetId) };
 		Cursor c = db.query(ImageDBUtil.TABLE_IMAGES,
@@ -683,11 +759,10 @@ public class ImageDB extends SQLiteOpenHelper {
 			opts.inDither = true;
 			opts.inJustDecodeBounds = false;
 			opts.inPurgeable = true;
-			// opts.inPreferQualityOverSpeed = false;
-			opts.inSampleSize = 4;
+			opts.inSampleSize = bmpSampleSize;
 			opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
 			bmps = new Bitmap[c.getCount()];
-			for (int i = 0; i < bmps.length; i++) {
+			for (int i = 0; i < c.getCount(); i++) {
 				String bitmapFilepath = c.getString(c
 						.getColumnIndex(ImageDBUtil.IMAGES_FILEPATH));
 				try {
@@ -700,22 +775,11 @@ public class ImageDB extends SQLiteOpenHelper {
 				c.moveToNext();
 			}
 		}
-		c.close();
+		if (null != c) {
+			c.close();
+		}
 		ret.putParcelableArray("images", bmps);
 		return ret;
-	}
-
-	/**
-	 * @param appWidgetId
-	 * @param imgId
-	 * @return
-	 */
-	public String buildImgFilePath(int appWidgetId, long imgId) {
-		File f = new File(ctx.getFilesDir() + CACHE_SUBDIR);
-		f.mkdir();
-		f = new File(ctx.getFilesDir() + CACHE_SUBDIR, "img_" + appWidgetId
-				+ Constants.UNDERSCORE + Long.toString(imgId) + ".png");
-		return f.getAbsolutePath();
 	}
 
 }

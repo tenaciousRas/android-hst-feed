@@ -30,7 +30,9 @@ import android.widget.Button;
 import android.widget.EditText;
 
 import com.longevitysoft.android.appwidget.hstfeed.R;
+import com.longevitysoft.android.appwidget.hstfeed.handler.HSTFeedXMLWorkerHandler.HSTFeedXMLWorkerListener;
 import com.longevitysoft.android.appwidget.hstfeed.provider.ImageDB;
+import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService.HSTFeedXML;
 
 /**
  * @author fbeachler
@@ -103,7 +105,7 @@ public abstract class HSTFeedConfigureBase extends BaseActivity {
 				Intent intent = new Intent(HSTFeedConfigureBase.this,
 						HSTFeedConfigureImages.class);
 				intent.putExtra("appWidgetId", appWidgetId);
-				intent.putExtra("size", size);
+				intent.putExtra("widgetSize", widgetSize);
 				if (null == widget) {
 					widget = new Bundle();
 				}
@@ -135,14 +137,16 @@ public abstract class HSTFeedConfigureBase extends BaseActivity {
 							widget.getFloat("dec", 0f),
 							widget.getFloat("area", 0f), 0);
 				} else {
+					// update existing widget
 					db.updateWidget(appWidgetId, 0, widget.getFloat("ra", 0f),
 							widget.getFloat("dec", 0f),
 							widget.getFloat("area", 0f), 0);
-				}
-				if (!origRa.equals(widget.getFloat("ra"))
-						|| !origDec.equals(widget.getFloat("dec"))
-						|| !origArea.equals(widget.getFloat("area"))) {
-					db.deleteAllImages(appWidgetId);
+					if (!origRa.equals(widget.getFloat("ra"))
+							|| !origDec.equals(widget.getFloat("dec"))
+							|| !origArea.equals(widget.getFloat("area"))) {
+						// delete cached images if ra, dec, or area change
+						db.deleteAllImages(appWidgetId);
+					}
 				}
 				// launch next activity
 				intent.putExtra("widget", widget);
@@ -169,6 +173,8 @@ public abstract class HSTFeedConfigureBase extends BaseActivity {
 			area.setText(Float.toString(getIntent().getBundleExtra("widget")
 					.getFloat("area")));
 		}
+		go.requestFocus(); // first field being edit text causes keyboard to
+							// hide UI
 	}
 
 	/*
@@ -193,5 +199,57 @@ public abstract class HSTFeedConfigureBase extends BaseActivity {
 		final Intent intent = new Intent();
 		intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
 		setResult(resultCode, intent);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.longevitysoft.android.appwidget.hstfeed.activity.BaseActivity#
+	 * onFeedParseStart()
+	 */
+	@Override
+	public void onFeedParseStart() {
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.longevitysoft.android.appwidget.hstfeed.activity.BaseActivity#
+	 * onFeedXMLLoaded(int)
+	 */
+	@Override
+	public void onFeedXMLLoaded(int numImages) {
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.longevitysoft.android.appwidget.hstfeed.activity.BaseActivity#
+	 * onFeedImageLoaded(java.lang.String)
+	 */
+	@Override
+	public void onFeedImageLoaded(final String imgSrc) {
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.longevitysoft.android.appwidget.hstfeed.activity.BaseActivity#
+	 * onFeedAllImagesLoaded
+	 * (com.longevitysoft.android.appwidget.hstfeed.service.
+	 * HSTFeedService.HSTFeedXML)
+	 */
+	@Override
+	public void onFeedAllImagesLoaded(final HSTFeedXML feed) {
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.longevitysoft.android.appwidget.hstfeed.activity.BaseActivity#
+	 * onFeedParseComplete()
+	 */
+	@Override
+	public void onFeedParseComplete() {
 	}
 }

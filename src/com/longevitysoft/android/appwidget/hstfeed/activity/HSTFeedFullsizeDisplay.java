@@ -22,6 +22,7 @@
 package com.longevitysoft.android.appwidget.hstfeed.activity;
 
 import java.util.Locale;
+import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,8 +39,11 @@ import com.longevitysoft.android.appwidget.hstfeed.R;
 import com.longevitysoft.android.appwidget.hstfeed.provider.ImageDB;
 import com.longevitysoft.android.appwidget.hstfeed.provider.ImageDBUtil;
 import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService;
+import com.longevitysoft.android.appwidget.hstfeed.util.HSTFeedUtil;
 
 /**
+ * Displays HST image in full activity.
+ * 
  * @author fbeachler
  * 
  */
@@ -47,7 +51,7 @@ public class HSTFeedFullsizeDisplay extends BaseActivity {
 
 	private static final String TAG = "HSTFeedFullsizeDisplay";
 
-	private int appWidgetId, size, imageId;
+	private int appWidgetId, widgetSize, imageId;
 	private Bundle widget, imageData;
 	private Float ra, dec, area;
 	private ImageView fullImg;
@@ -58,7 +62,7 @@ public class HSTFeedFullsizeDisplay extends BaseActivity {
 		widget = getIntent().getBundleExtra("widget");
 		appWidgetId = widget.getInt(ImageDBUtil.WIDGETS_ID,
 				AppWidgetManager.INVALID_APPWIDGET_ID);
-		size = getIntent().getIntExtra("size", HSTFeedService.SIZE_SMALL);
+		widgetSize = getIntent().getIntExtra("widgetSize", HSTFeedService.SIZE_SMALL);
 		imageData = getIntent().getBundleExtra("imageData");
 		imageId = imageData.getInt(ImageDBUtil.IMAGES_ID);
 		ra = widget.getFloat("ra", 0f);
@@ -77,7 +81,7 @@ public class HSTFeedFullsizeDisplay extends BaseActivity {
 		if (imageData.getString(ImageDBUtil.IMAGES_CAPTION) != null) {
 			contentTxt.setVisibility(View.VISIBLE);
 			contentTxt.setText(HSTFeedFullsizeDisplay
-					.capitalizeFirstLetterInEverySentence(imageData
+					.capitalizeSentence(imageData
 							.getString(ImageDBUtil.IMAGES_CAPTION)));
 		}
 		contentTxt = (TextView) findViewById(R.id.label_credits);
@@ -105,7 +109,11 @@ public class HSTFeedFullsizeDisplay extends BaseActivity {
 	protected void onResume() {
 		super.onResume();
 		ImageDB db = ImageDB.getInstance(getBaseContext());
-		Bitmap dbbm = db.getImageBitmap(appWidgetId, imageId);
+		Vector<Integer> imgBounds = db.getImageBitmapBounds(appWidgetId,
+				imageId);
+		int sampleSize = HSTFeedUtil.calcBitmapScaleFactor(widgetSize,
+				imgBounds);
+		Bitmap dbbm = db.getImageBitmap(appWidgetId, imageId, sampleSize);
 		DisplayMetrics metrics = getBaseContext().getResources()
 				.getDisplayMetrics();
 		if (null != metrics && null != dbbm) {
@@ -140,7 +148,7 @@ public class HSTFeedFullsizeDisplay extends BaseActivity {
 	 * @param content
 	 * @return
 	 */
-	public static String capitalizeFirstLetterInEverySentence(String content) {
+	public static String capitalizeSentence(String content) {
 		Pattern capitalize = Pattern.compile("([\\?!\\.]\\s*)([a-z])");
 		Matcher m = capitalize.matcher(content);
 		while (m.find()) {

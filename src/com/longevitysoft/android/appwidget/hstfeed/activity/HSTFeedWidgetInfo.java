@@ -28,6 +28,8 @@ import android.widget.TextView;
 import com.longevitysoft.android.appwidget.hstfeed.R;
 
 /**
+ * Displays widget credits and info.
+ * 
  * @author fbeachler
  * 
  */

@@ -55,6 +55,7 @@ public final class Constants {
 	public static final String SLASHPOUND = "/#";
 	public static final String OPEN_PAREN = "(";
 	public static final String CLOSED_PAREN = ")";
+	public static final String QUESTION = "?";
 	public static final String EQUALS_QUESTION = " = ?";
 	public static final String IN = " IN ";
 	public static final String EXT_PNG = ".png";

@@ -20,7 +20,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentRight="true"
-                android:text="@string/header_abbr_area"
+                android:text="@string/area"
                 android:textSize="10sp" />
 
             <TextView
@@ -28,7 +28,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_toLeftOf="@id/area"
-                android:text="@string/header_abbr_dec"
+                android:text="@string/abbr_dec"
                 android:textSize="10sp" />
 
             <TextView
@@ -36,7 +36,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_toLeftOf="@id/dec"
-                android:text="@string/header_abbr_ra"
+                android:text="@string/abbr_ra"
                 android:textSize="10sp" />
 
             <TextView
@@ -93,10 +93,10 @@
             <TextView
                 android:id="@+id/label_credits"
                 android:layout_width="wrap_content"
-                android:layout_height="12dp"
+                android:layout_height="11sp"
                 android:layout_below="@id/hst_img"
                 android:text="@string/credits"
-                android:textSize="9sp" />
+                android:textSize="10sp" />
 
             <TextView
                 android:id="@+id/credits"
@@ -105,7 +105,7 @@
                 android:layout_below="@id/label_credits"
                 android:ellipsize="end"
                 android:text=""
-                android:textSize="10sp" />
+                android:textSize="11sp" />
         </RelativeLayout>
     </RelativeLayout>
 

@@ -38,8 +38,18 @@ import android.util.Log;
 public abstract class HSTFeedBase extends AppWidgetProvider {
 	public static final String TAG = "HSTFeed";
 
+	/**
+	 * @return widget size value as declared in {@link HSTFeedService}.
+	 */
 	public abstract int getSize();
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * android.appwidget.AppWidgetProvider#onUpdate(android.content.Context,
+	 * android.appwidget.AppWidgetManager, int[])
+	 */
 	@Override
 	public void onUpdate(Context context, AppWidgetManager appWidgetManager,
 			int[] appWidgetIds) {
@@ -49,12 +59,19 @@ public abstract class HSTFeedBase extends AppWidgetProvider {
 		}
 		for (int appWidgetId : appWidgetIds) {
 			Intent intent = new Intent(context, HSTFeedService.class);
-			intent.putExtra("size", getSize());
+			intent.putExtra("widgetSize", getSize());
 			intent.putExtra("appWidgetId", appWidgetId);
 			context.startService(intent);
 		}
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * android.appwidget.AppWidgetProvider#onReceive(android.content.Context,
+	 * android.content.Intent)
+	 */
 	@Override
 	public void onReceive(Context context, Intent intent) {
 		super.onReceive(context, intent);
@@ -76,7 +93,7 @@ public abstract class HSTFeedBase extends AppWidgetProvider {
 					AppWidgetManager.EXTRA_APPWIDGET_ID,
 					AppWidgetManager.INVALID_APPWIDGET_ID);
 			Intent servIntent = new Intent(context, HSTFeedService.class);
-			servIntent.putExtra("size", HSTFeedService.SIZE_SMALL);
+			servIntent.putExtra("widgetSize", HSTFeedService.SIZE_SMALL);
 			servIntent.putExtra("appWidgetId", appWidgetId);
 			context.startService(servIntent);
 		}

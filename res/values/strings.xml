@@ -2,17 +2,12 @@
 <resources>
 
     <string name="app_name">HST Images Feed Widget</string>
-    <string name="app_desc">HST Images Feed Widget is an Android Application that displays a slideshow of HST PR images from the MAST web service.</string>
+    <string name="app_desc">HST Images Feed Widget is an Android Widget that displays a slideshow of HST PR images from the MAST web service.</string>
     <string name="app_creator">Created by Free Beachler, Longevity Software LLC</string>
     <!-- labels -->
     <string name="widget_sm">HST Feed (Small)</string>
     <string name="widget_med">HST Feed (Medium)</string>
     <string name="widget_lg">HST Feed (Large)</string>
-    <string name="ra">Right Ascension</string>
-    <string name="dec">Declination</string>
-    <string name="degree">Degree</string>
-    <string name="search_radius">Search Radius</string>
-    <string name="area">Area</string>
     <string name="loading">Loading</string>
     <string name="loading_hst_feed">Loading Images from HST Feed&#8230;</string>
     <string name="cancel">Cancel</string>
@@ -31,31 +26,40 @@
     <string name="delete_image">Delete Image</string>
     <string name="edit_images">Edit Images</string>
     <string name="missing_interval">Update interval required!</string>
-    <string name="download_image_list">Downloading image list&#8230;</string>
+    <string name="download_xml_feed">Downloading MAST/HST feed data&#8230;</string>
+    <string name="download_image_list">Downloading images&#8230;</string>
     <string name="download_images" formatted="false">Downloading image %d of %d&#8230;</string>
     <string name="no_images_found" formatted="false">No images were found at RA=%f, DEC=%f, Area=%f</string>
-    <string name="download_title">Download HST Feed Images</string>
-    <string name="download_wait">Please wait&#8230;</string>
+    <string name="download_images_err_unexpected">Unable to download images.  HST Feed Images widget encountered an unexpected problem.</string>
+    <string name="header_download">Download HST Feed Images</string>
     <string name="feed_images_empty">Search Returned Nothing</string>
-    <string name="feed_images_count">%d Image(s) in Feed</string>
+    <string name="feed_images_count">%d Image(s) in HST Feed</string>
     <string name="pls_configure">To display awesome HST images, click to configure this widget.</string>
+    <string name="ra">Right Ascension</string>
+    <string name="dec">Declination</string>
+    <string name="degree">Degree</string>
+    <string name="search_radius">Search Radius</string>
+    <string name="area">Area</string>
     <!-- abbrevs -->
     <string name="abbr_ra">R.A.</string>
     <string name="abbr_dec">Dec.</string>
     <string name="abbr_degree">deg.</string>
-    <string name="header_abbr_ra">R.A.; </string>
-    <string name="header_abbr_dec">Dec.; </string>
-    <string name="header_abbr_area">Area</string>
+    <string name="search_area">Search Area</string>
+    <string name="hst_search_instructions">Enter Right Ascension, Declination, and Area as decimal values.\nUse 0, 0, 0 to retrieve the "HST Press Release" images.</string>
     <!-- symbols -->
     <string name="sym_degree">&#xf8;</string>
     <!-- content desc -->
     <string name="cdesc_hst_img">HST Image</string>
     <string name="cdesc_lsoft_logo">company logo, Longevity Software LLC</string>
     <!-- HTML -->
-    <string name="widget_info_content">&lt;h5&gt;This is not official MAST software.  This application is neither created, nor published, nor endorsed by MAST, NASA, JPL, ESA, or any of the data providers mentioned herein and in captions.&lt;/h5&gt;
+    <!-- official MAST copyright notice at http://hubblesite.org/about_us/copyright.php -->
+    <string name="widget_info_content">&lt;h5&gt;HST Images Feed Widget is not official MAST software.  MAST is not affiliated with this application or its publisher.&lt;/h5&gt;
+	&lt;h4&gt;Credits&lt;/h4&gt;
 	&lt;p&gt;HST Images Feed Widget images and data presented in this application is obtained from the Mikulski Archive for Space Telescopes (MAST). STScI is operated by the Association of Universities for Research in Astronomy, Inc., under NASA contract NAS5-26555. Support for MAST for non-HST data is provided by the NASA Office for Space Science via grant NNX13AC07G and by other grants and contracts.&lt;/p&gt;
 	&lt;p&gt;The Hubble Space Telescope graphic used in HST Images Feed Widget is courtesy of NASA/JPL.&lt;/p&gt;
-	&lt;p&gt;All Android iconography, graphics, and images (in other words, all the imagery not cited above) are copyright &#169; 2014 Longevity Software LLC, all rights reserved.&lt;/p&gt;
+	&lt;h4&gt;Application Copyright&lt;/h4&gt;
+	&lt;p&gt;All Android iconography, graphics, and images (in other words, all the imagery which is not from the MAST HST feed) are copyright &#169; 2014 Longevity Software LLC, all rights reserved.&lt;/p&gt;
+	&lt;h4&gt;HST Imaged Feed Widget Disclaimer&lt;/h4&gt;
 	&lt;blockquote&gt;
 	&lt;pre&gt;
 HSTFeed is distributed in the hope that it will be useful,
@@ -71,6 +75,65 @@ build upon this work, you may distribute the resulting work only under the same 
 You should have received a copy of the Creative Commons Non-Commercial
 License along with HSTFeed.  If not, see &lt;a href=&quot;http://creativecommons.org/licenses/by-nc-sa/3.0/&quot;&gt;http://creativecommons.org/licenses/by-nc-sa/3.0/&lt;/a&gt;.
 	&lt;/pre&gt;
-	&lt;/blockquote&gt;</string>
+	&lt;/blockquote&gt;
+	&lt;h4&gt;MAST Copyright Notice&lt;/h4&gt;
+	&lt;p&gt;The latest copy of the MAST copyright notice is available at &lt;a href=&quot;http://hubblesite.org/about_us/copyright.php&quot;&gt;http://hubblesite.org/about_us/copyright.php&lt;/a&gt;.
+	&lt;div&gt;
+              &lt;p&gt;Material credited to 
+                STScI on this site was created, authored, and/or prepared for 
+                NASA under Contract NAS5-26555. Unless otherwise specifically 
+                stated, no claim to copyright is being asserted by STScI and it 
+                may be freely used as in the public domain in accordance with 
+                NASA\'s contract. However, it is requested that in any subsequent 
+                use of this work NASA and STScI be given appropriate acknowledgement. 
+                STScI further requests voluntary reporting of all use, derivative 
+                creation, and other alteration of this work. Such reporting should 
+                be sent to &lt;a href=&quot;mailto:copyright@stsci.edu&quot;&gt;copyright@stsci.edu&lt;/a&gt;.&lt;/p&gt;
+              &lt;p&gt; This site also contains 
+                material generated, authored and/or prepared by individuals or 
+                institutions other than STScI, and those individuals or institutions 
+                may claim copyright. Should you desire use of such material at 
+                this time, inquiries should be made to those individuals and institutions 
+                in accordance with the following: &lt;/p&gt;
+              &lt;p&gt;A catalogue of HST 
+                publicly released images on this site may be found at the following 
+                location: &lt;a href=&quot;http://hubblesite.org/newscenter/&quot;&gt;http://hubblesite.org/newscenter/&lt;/a&gt;. 
+                If the credit line for an image lists STScI as the source, the 
+                image may be freely used as in the public domain as noted above. 
+                However, for credit lines listing individuals from other institutions, 
+                you will need to contact that institution listed in the credit 
+                line to advise you on the copyright policy for that image. If the individual listed in the credit line is a member of the American Astronomical Society you can obtain their contact information from (&lt;a href=&quot;https://members.aas.org/directory/directory.cfm&quot;&gt;https://members.aas.org/directory/directory.cfm&lt;/a&gt;). 
+                &lt;/p&gt;
+              &lt;h3&gt;&lt;span&gt;Disclaimers&lt;/span&gt;&lt;/h3&gt;
+              &lt;p&gt;The availability of 
+                STScI materials on this web site does not imply the endorsement 
+                of STScI or by any STScI employee of any private use of such materials, 
+                including, in particular, any commercial use and any use intended 
+                to mislead. &lt;/p&gt;
+              &lt;p&gt;&lt;strong&gt;Photography:&lt;/strong&gt; If a recognizable 
+                person appears in a photograph, use for commercial purposes may 
+                infringe a right of privacy or publicity and permission should 
+                be obtained from the recognizable person. &lt;/p&gt;
+              &lt;p&gt;&lt;strong&gt;Audio Recordings:&lt;/strong&gt; Use 
+                of a portion or segment of an audiotape, such as talent, narration 
+                or music, may infringe a right of publicity or copyright and permission 
+                should be obtained from the source. &lt;/p&gt;
+              &lt;p&gt;&lt;strong&gt;Video or Motion Picture 
+                Recordings:&lt;/strong&gt; Music or footage copyrighted by others, which is incorporated 
+                in a production, may not be used unless permission is obtained 
+                from the copyright owner. While in most instances using non-copyrighted 
+                segments is permitted, use for commercial purposes of a portion 
+                or segment containing talent or a recognizable person may infringe 
+                a right of publicity and permission should be obtained from the 
+                talent or recognizable person. These guidelines also apply to 
+                STScI\'s &quot;live television&quot; satellite broadcasts. &lt;/p&gt;
+              &lt;p&gt;&lt;strong&gt;Additional Notice Effective January 1, 2008&lt;/strong&gt;&lt;/p&gt;
+              &lt;p&gt;Individuals and institutions other than AURA/STScI and grantees of STScI whose work was funded by NASA are requested to state at the time they contribute materials for distribution on STScI websites whether they wish to claim any copyright restrictions. If they do not do so it will be assumed that no copyright restriction is claimed. Of course, such individuals and institutions will be given appropriate credit for their contributions. If they do claim copyright restrictions, an appropriate notice will be added to that particular material, and users who wish to down-load that material and distribute it further will have to obtain permission from the source of that material. &lt;/p&gt;
+              &lt;p&gt;STScI is operated by the Association of Universities for research in Astronomy, Inc. under a contract with the National Aeronautics and Space Administration. &lt;/p&gt;
+              &lt;p&gt;Any questions you may 
+                have regarding the above copyright statement can be directed to 
+                &lt;a href=&quot;mailto:copyright@stsci.edu&quot;&gt;copyright@stsci.edu&lt;/a&gt;.&lt;/p&gt;
+                            
+          &lt;/div&gt;</string>
 
 </resources>
