@@ -228,6 +228,7 @@ public class HSTFeedWidgetTouchOptions extends BaseActivity implements
 				// next image
 				Log.d(TAG, "next image");
 				db.invalidateWidget(appWidgetId);
+				db.needsUpdate(appWidgetId);
 				views = feedService.buildRemoteViews(this, appWidgetId,
 						widgetSize);
 				manager.updateAppWidget(appWidgetId, views);
@@ -247,7 +248,6 @@ public class HSTFeedWidgetTouchOptions extends BaseActivity implements
 					views = feedService.buildRemoteViews(this, appWidgetId,
 							widgetSize);
 					manager.updateAppWidget(appWidgetId, views);
-					db.invalidateWidget(appWidgetId);
 				} else {
 					Log.d(TAG, "unable to set previous image, aborting");
 				}
