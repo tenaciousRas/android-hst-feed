@@ -111,7 +111,8 @@ public class HSTFeedXMLWorker extends AsyncTask<String, Void, HSTFeedXML> {
 		if (0 < feedImages.size()) {
 			for (HSTImage feedImage : feedImages) {
 				byte[] imgData = downloadImage(
-						transformArchiveUrlToImageUrl(feedImage.getArchiveUrl()))
+						transformArchiveUrlToImageUrl(
+								feedImage.getArchiveUrl(), widgetSize))
 						.toByteArray();
 				if (imgData.length > 0) {
 					// store immediately
@@ -278,19 +279,30 @@ public class HSTFeedXMLWorker extends AsyncTask<String, Void, HSTFeedXML> {
 			HttpURLConnection con = (HttpURLConnection) (new URL(url))
 					.openConnection();
 			con.setRequestMethod(HttpGet.METHOD_NAME);
+			con.addRequestProperty("Accept", "Accept:*/*;q=0.8");
+			con.addRequestProperty(
+					"User-Agent",
+					"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.101 Safari/537.36");
 			con.setDoInput(true);
-			con.setDoOutput(false);
-			con.connect();
+			con.setDoOutput(true);
 			if (con.getContentLength() > 10 * 1024 * 1024) {
 				// TODO place oversized error image
 				return baos;
 			}
 			InputStream is = con.getInputStream();
-			byte[] b = new byte[1024];
-			while (is.read(b) != -1) {
-				baos.write(b);
+			byte[] buf = new byte[1024];
+			int rdCnt = 1;
+			while (true) {
+				// while (is.read(b) != -1) {
+				rdCnt = is.read(buf, 0, 1024);
+				if (0 > rdCnt) {
+					break;
+				}
+				baos.write(buf, 0, rdCnt);
 			}
 			con.disconnect();
+			baos.flush();
+			baos.close();
 		} catch (MalformedURLException e) {
 			Log.e(TAG, Log.getStackTraceString(e));
 		} catch (IOException e) {
@@ -419,7 +431,8 @@ public class HSTFeedXMLWorker extends AsyncTask<String, Void, HSTFeedXML> {
 	 * @param url
 	 * @return
 	 */
-	private String transformArchiveUrlToImageUrl(final String url) {
+	private String transformArchiveUrlToImageUrl(final String url,
+			final int widgetSize) {
 		if (url == null) {
 			return null;
 		}
@@ -432,7 +445,16 @@ public class HSTFeedXMLWorker extends AsyncTask<String, Void, HSTFeedXML> {
 		transformed.append(parsed.getPathSegments().get(4));
 		transformed.append("-");
 		transformed.append(parsed.getPathSegments().get(6));
-		transformed.append("-web.jpg");
+		switch (widgetSize) {
+		case HSTFeedService.SIZE_LARGE:
+			transformed.append("-large_web.jpg");
+			break;
+		case HSTFeedService.SIZE_MEDIUM:
+		case HSTFeedService.SIZE_SMALL:
+		default:
+			transformed.append("-web.jpg");
+			break;
+		}
 		return transformed.toString();
 	}
 }

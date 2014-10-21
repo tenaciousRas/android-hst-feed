@@ -25,8 +25,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 import java.util.Vector;
 
@@ -36,14 +34,12 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.graphics.Bitmap;
-import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
 import android.graphics.BitmapFactory.Options;
 import android.os.Bundle;
 import android.text.format.Time;
 import android.util.Log;
 
-import com.longevitysoft.android.appwidget.hstfeed.service.HSTImage;
 import com.longevitysoft.android.appwidget.hstfeed.util.HSTFeedUtil;
 
 /**
@@ -199,42 +195,43 @@ public class ImageDB extends SQLiteOpenHelper {
 				c.close();
 				return true;
 			}
-			int idx = 0;
 			if (c.moveToFirst() && 1 < c.getCount()) {
 				updates++;
 				c.moveToLast();
-				idx = c.getColumnIndex(ImageDBUtil.IMAGES_ID);
-				if (c.getInt(idx) == current) {
-					// current image is last image, loop to first
-					if (c.moveToFirst()) {
+				int idx = c.getColumnIndex(ImageDBUtil.IMAGES_ID);
+				if (0 > idx || idx >= c.getColumnCount()) {
+					return true;
+				}
+				// current image is not last image
+				if (widget.getInt(ImageDBUtil.WIDGETS_ORDER) == 1) {
+					// random ordering
+					Random rand = new Random();
+					int oldCurrent = current;
+					c.moveToFirst();
+					do {
+						current = rand.nextInt(c.getCount());
+						if (!c.move(current - 1)) {
+							break;
+						}
 						current = c.getInt(idx);
-					}
+					} while (current == oldCurrent);
 				} else {
-					// current image is not last image
-					if (widget.getInt(ImageDBUtil.WIDGETS_ORDER) == 1) {
-						// random ordering
-						Random rand = new Random();
-						int oldCurrent = current;
-						c.moveToFirst();
-						do {
-							current = rand.nextInt(c.getCount());
-							if (!c.move(current - 1)) {
-								break;
-							}
+					// linear ordering
+					if (c.getInt(idx) == current) {
+						// current image is last image, loop to first
+						if (c.moveToFirst()) {
 							current = c.getInt(idx);
-						} while (current == oldCurrent);
+						}
 					} else {
-						// linear ordering
 						c.moveToFirst();
+						int nCurr = current;
 						do {
-							if (0 > idx || idx >= c.getColumnCount()) {
-								continue;
-							}
-							if (c.getInt(idx) > current) {
+							nCurr = c.getInt(idx);
+							if (nCurr > current) {
 								break;
 							}
 						} while (c.moveToNext());
-						current = c.getInt(idx);
+						current = nCurr;
 					}
 				}
 			}
@@ -279,7 +276,7 @@ public class ImageDB extends SQLiteOpenHelper {
 	 */
 	public long setImage(int appWidgetId, String name, String archvUri,
 			String fullUri, String credits, String creditsUri, String caption,
-			String captionUri, int weight, Bitmap bitmap) {
+			String captionUri, int weight, byte[] bitmap) {
 		Cursor c;
 		if (weight < 0) {
 			c = db.query(ImageDBUtil.TABLE_IMAGES,
@@ -313,11 +310,19 @@ public class ImageDB extends SQLiteOpenHelper {
 		try {
 			fos = new FileOutputStream(f);
 			if (null != bitmap) {
-				bitmap.compress(CompressFormat.PNG, 100, fos);
-				bitmap.recycle();
+				if (null != bitmap) {
+					int off = 0, byteCnt;
+					while (off < bitmap.length) {
+						byteCnt = bitmap.length - off > 1023 ? 1024
+								: bitmap.length - off;
+						fos.write(bitmap, off, byteCnt);
+						off += 1024;
+					}
+				}
+				fos.flush();
 			}
-			fos.flush();
 			fos.close();
+			Log.d(TAG, "image file cached at path=" + outFP);
 			values.clear();
 			values.put(ImageDBUtil.IMAGES_FILEPATH, outFP);
 			String whereClause = ImageDBUtil.IMAGES_ID + " = ?";
@@ -332,36 +337,6 @@ public class ImageDB extends SQLiteOpenHelper {
 			Log.e(TAG, Log.getStackTraceString(e));
 		}
 		return rowId;
-	}
-
-	/**
-	 * @param appWidgetId
-	 * @param name
-	 * @param archvUri
-	 * @param fullUri
-	 * @param credits
-	 * @param creditsUri
-	 * @param caption
-	 * @param captionUri
-	 * @param weight
-	 * @param bitmap
-	 * @return
-	 */
-	public long setImage(int appWidgetId, String name, String archvUri,
-			String fullUri, String credits, String creditsUri, String caption,
-			String captionUri, int weight, byte[] bitmap) {
-		if (bitmap == null) {
-			return -1;
-		}
-		Options opts = new Options();
-		opts.inDither = true;
-		opts.inJustDecodeBounds = false;
-		opts.inInputShareable = true;
-		opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
-		Bitmap bmp = BitmapFactory.decodeByteArray(bitmap, 0, bitmap.length,
-				opts);
-		return setImage(appWidgetId, name, archvUri, fullUri, credits,
-				creditsUri, caption, captionUri, weight, bmp);
 	}
 
 	/**
@@ -395,7 +370,7 @@ public class ImageDB extends SQLiteOpenHelper {
 			opts.inJustDecodeBounds = true;
 			opts.inPurgeable = true;
 			opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
-			bitmap = BitmapFactory.decodeFile(bitmapFilepath);
+			bitmap = BitmapFactory.decodeFile(bitmapFilepath, opts);
 			if (null == bitmap) {
 				return bounds;
 			}
@@ -433,13 +408,15 @@ public class ImageDB extends SQLiteOpenHelper {
 		if (c.moveToFirst()) {
 			String bitmapFilepath = c.getString(c
 					.getColumnIndex(ImageDBUtil.IMAGES_FILEPATH));
-			bitmap = BitmapFactory.decodeFile(bitmapFilepath);
+			bitmap = BitmapFactory.decodeFile(bitmapFilepath, opts);
 		}
 		c.close();
 		return bitmap;
 	}
 
 	/**
+	 * Returns a bytearray output stream for a cached image.
+	 * 
 	 * @param appWidgetId
 	 * @param imgId
 	 * @return
@@ -758,7 +735,7 @@ public class ImageDB extends SQLiteOpenHelper {
 			Options opts = new Options();
 			opts.inDither = true;
 			opts.inJustDecodeBounds = false;
-			opts.inPurgeable = true;
+			opts.inPurgeable = false;
 			opts.inSampleSize = bmpSampleSize;
 			opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
 			bmps = new Bitmap[c.getCount()];

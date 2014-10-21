@@ -211,6 +211,7 @@ public class HSTFeedService extends Service implements HSTFeedXMLWorkerListener 
 	 */
 	@Override
 	public void onFeedAllImagesLoaded(HSTFeedXML feed) {
+		downloadInProgress = false;
 		if (null != xmlWorkerListeners) {
 			for (HSTFeedXMLWorkerListener listener : xmlWorkerListeners) {
 				listener.onFeedAllImagesLoaded(feed);
@@ -342,61 +343,58 @@ public class HSTFeedService extends Service implements HSTFeedXMLWorkerListener 
 			break;
 		case SIZE_MEDIUM:
 		case SIZE_LARGE:
-			view.setTextViewText(R.id.ra, getString(R.string.ra)
+			view.setTextViewText(R.id.ra, getString(R.string.abbr_ra)
 					+ Constants.SPACE + Float.toString(ra)
 					+ Constants.SEMICOLON + Constants.SPACE);
-			view.setTextViewText(R.id.dec, getString(R.string.ra)
+			view.setTextViewText(R.id.dec, getString(R.string.dec)
 					+ Constants.SPACE + Float.toString(dec)
 					+ Constants.SEMICOLON + Constants.SPACE);
 			view.setTextViewText(
 					R.id.area,
-					getString(R.string.ra) + Constants.SPACE
+					getString(R.string.area) + Constants.SPACE
 							+ Float.toString(area)
 							+ context.getString(R.string.sym_degree));
 			break;
 		}
-		if (db.needsUpdate(appWidgetId)) {
-			// set bitmap
-			Bundle imgData = db.getImageMeta(appWidgetId, current);
-			if (imgData.getString(ImageDBUtil.IMAGES_FILEPATH) == null
-					&& !downloadInProgress) {
-				// load feed+images in background
-				loadFeedInBackground(appWidgetId, widgetSize, ra, dec, area);
-				// set loading msg
-				view.setViewVisibility(R.id.hst_img_loading, View.VISIBLE);
-				view.setViewVisibility(R.id.label_credits, View.INVISIBLE);
-				view.setViewVisibility(R.id.credits, View.INVISIBLE);
-				view.setViewVisibility(R.id.name, View.INVISIBLE);
-				view.setImageViewResource(R.id.hst_img,
-						R.drawable.ic_feed_loading);
-				view = HSTFeedUtil
-						.buildWidgetClickIntent(view, getBaseContext(),
-								appWidgetId, widgetSize, widget, null);
-			} else {
-				if (imgData.getString(ImageDBUtil.IMAGES_NAME) != null) {
-					view.setTextViewText(R.id.name,
-							imgData.getString(ImageDBUtil.IMAGES_NAME));
-				}
-				if (imgData.getString(ImageDBUtil.IMAGES_CREDITS) != null) {
-					view.setTextViewText(R.id.credits,
-							imgData.getString(ImageDBUtil.IMAGES_CREDITS));
-				}
-				int sampleSize = HSTFeedUtil.calcBitmapScaleFactor(widgetSize,
-						db.getImageBitmapBounds(appWidgetId, current));
-				Bitmap dbbm = db.getImageBitmap(appWidgetId, current,
-						sampleSize);
-				if (dbbm != null) {
-					view.setViewVisibility(R.id.hst_img_loading, View.INVISIBLE);
-					view.setViewVisibility(R.id.label_credits, View.VISIBLE);
-					view.setViewVisibility(R.id.credits, View.VISIBLE);
-					view.setViewVisibility(R.id.name, View.VISIBLE);
-					view.setImageViewBitmap(R.id.hst_img, dbbm);
-				}
-				// set click intent
-				view = HSTFeedUtil.buildWidgetClickIntent(view,
-						getBaseContext(), appWidgetId, widgetSize, widget,
-						imgData);
+		Bundle imgData = db.getImageMeta(appWidgetId, current);
+		if (downloadInProgress
+				|| imgData.getString(ImageDBUtil.IMAGES_FILEPATH) == null) {
+			// set loading msg
+			view.setViewVisibility(R.id.hst_img_loading, View.VISIBLE);
+			view.setViewVisibility(R.id.label_credits, View.INVISIBLE);
+			view.setViewVisibility(R.id.credits, View.INVISIBLE);
+			view.setViewVisibility(R.id.name, View.INVISIBLE);
+			view.setImageViewResource(R.id.hst_img, R.drawable.ic_feed_loading);
+			view = HSTFeedUtil.buildWidgetClickIntent(view, getBaseContext(),
+					appWidgetId, widgetSize, widget, null);
+		}
+		if (imgData.getString(ImageDBUtil.IMAGES_FILEPATH) == null) {
+			// load feed+images in background
+			loadFeedInBackground(appWidgetId, widgetSize, ra, dec, area);
+		} else {
+			if (imgData.getString(ImageDBUtil.IMAGES_NAME) != null) {
+				view.setTextViewText(R.id.name,
+						imgData.getString(ImageDBUtil.IMAGES_NAME));
 			}
+			if (imgData.getString(ImageDBUtil.IMAGES_CREDITS) != null) {
+				view.setTextViewText(R.id.credits,
+						imgData.getString(ImageDBUtil.IMAGES_CREDITS));
+			}
+			int sampleSize = HSTFeedUtil.calcBitmapScaleFactor(widgetSize,
+					db.getImageBitmapBounds(appWidgetId, current));
+			Bitmap dbbm = db.getImageBitmap(appWidgetId, current, sampleSize);
+			if (dbbm != null) {
+				view.setViewVisibility(R.id.hst_img_loading, View.INVISIBLE);
+				view.setViewVisibility(R.id.label_credits, View.VISIBLE);
+				view.setViewVisibility(R.id.credits, View.VISIBLE);
+				view.setViewVisibility(R.id.name, View.VISIBLE);
+				view.setImageViewBitmap(R.id.hst_img, dbbm);
+			} else {
+				// TODO set image missing from cache as src
+			}
+			// set click intent
+			view = HSTFeedUtil.buildWidgetClickIntent(view, getBaseContext(),
+					appWidgetId, widgetSize, widget, imgData);
 		}
 		return view;
 	}

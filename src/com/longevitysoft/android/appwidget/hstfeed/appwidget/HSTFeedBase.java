@@ -41,7 +41,7 @@ public abstract class HSTFeedBase extends AppWidgetProvider {
 	/**
 	 * @return widget size value as declared in {@link HSTFeedService}.
 	 */
-	public abstract int getSize();
+	public abstract int getWidgetSize();
 
 	/*
 	 * (non-Javadoc)
@@ -59,7 +59,7 @@ public abstract class HSTFeedBase extends AppWidgetProvider {
 		}
 		for (int appWidgetId : appWidgetIds) {
 			Intent intent = new Intent(context, HSTFeedService.class);
-			intent.putExtra("widgetSize", getSize());
+			intent.putExtra("widgetSize", getWidgetSize());
 			intent.putExtra("appWidgetId", appWidgetId);
 			context.startService(intent);
 		}
@@ -93,7 +93,7 @@ public abstract class HSTFeedBase extends AppWidgetProvider {
 					AppWidgetManager.EXTRA_APPWIDGET_ID,
 					AppWidgetManager.INVALID_APPWIDGET_ID);
 			Intent servIntent = new Intent(context, HSTFeedService.class);
-			servIntent.putExtra("widgetSize", HSTFeedService.SIZE_SMALL);
+			servIntent.putExtra("widgetSize", getWidgetSize());
 			servIntent.putExtra("appWidgetId", appWidgetId);
 			context.startService(servIntent);
 		}

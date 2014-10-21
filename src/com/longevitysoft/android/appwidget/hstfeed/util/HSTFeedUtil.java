@@ -28,6 +28,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.widget.RemoteViews;
 
@@ -44,7 +45,7 @@ public class HSTFeedUtil {
 
 	public static final String TAG = "HSTFeedUtil";
 
-	public static final String CACHE_SUBDIR = "/imgcache";
+	public static final String CACHE_SUBDIR = "/hstfeed/imgcache";
 
 	/**
 	 * Modifies the input view with an onclick pendingintent.
@@ -124,10 +125,14 @@ public class HSTFeedUtil {
 	 */
 	public static String buildImgFilePath(int appWidgetId, long imgId,
 			Context ctx) {
-		File f = new File(ctx.getFilesDir() + CACHE_SUBDIR);
-		f.mkdir();
-		f = new File(ctx.getFilesDir() + CACHE_SUBDIR, "img_" + appWidgetId
-				+ Constants.UNDERSCORE + Long.toString(imgId) + ".png");
+		File f = new File(Environment.getExternalStorageDirectory().getPath()
+				+ CACHE_SUBDIR);
+		// f = new File(ctx.getFilesDir() + CACHE_SUBDIR, "img_" + appWidgetId
+		// + Constants.UNDERSCORE + Long.toString(imgId) + ".jpg");
+		f.mkdirs();
+		f = new File(Environment.getExternalStorageDirectory().getPath()
+				+ CACHE_SUBDIR, "img_" + appWidgetId + Constants.UNDERSCORE
+				+ Long.toString(imgId) + ".jpg");
 		return f.getAbsolutePath();
 	}
 

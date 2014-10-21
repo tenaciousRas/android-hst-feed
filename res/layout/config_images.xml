@@ -52,7 +52,8 @@
             android:layout_height="44dp"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="22dp"
-            android:text="@string/go" />
+            android:text="@string/go"
+            android:textColor="@color/green" />
 
         <Button
             android:id="@+id/config_images_cancel"

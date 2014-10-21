@@ -30,7 +30,7 @@ import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService;
 public class HSTFeedLg extends HSTFeedBase {
 	public static final String TAG = "HSTFeedLg";
 
-	public int getSize() {
+	public int getWidgetSize() {
 		return HSTFeedService.SIZE_LARGE;
 	}
 }
