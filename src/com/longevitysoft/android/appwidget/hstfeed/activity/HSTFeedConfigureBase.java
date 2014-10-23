@@ -49,6 +49,9 @@ public abstract class HSTFeedConfigureBase extends BaseActivity {
 
 	public static final int TYPE_LOCAL = 0;
 
+	public static final String INTENT_EXTRA_NAME_WIDGET_CONFIG_RESET = "configReset";
+	public static final String INTENT_EXTRA_NAME_WIDGET_SIZE = "widgetSize";
+
 	private EditText ra, dec, area;
 	private Button cancel, go;
 	private Float origRa, origDec, origArea;
@@ -103,7 +106,7 @@ public abstract class HSTFeedConfigureBase extends BaseActivity {
 				Intent intent = new Intent(HSTFeedConfigureBase.this,
 						HSTFeedConfigureImages.class);
 				intent.putExtra("appWidgetId", appWidgetId);
-				intent.putExtra("widgetSize", widgetSize);
+				intent.putExtra(INTENT_EXTRA_NAME_WIDGET_SIZE, widgetSize);
 				intent.putExtra("edit", edit);
 				if (null == widget) {
 					widget = new Bundle();
@@ -146,6 +149,7 @@ public abstract class HSTFeedConfigureBase extends BaseActivity {
 						// delete cached images if ra, dec, or area change
 						// FIXME could get ANR here
 						db.deleteAllImages(appWidgetId);
+						intent.putExtra(INTENT_EXTRA_NAME_WIDGET_CONFIG_RESET, true);
 					}
 				}
 				// launch next activity
@@ -194,7 +198,7 @@ public abstract class HSTFeedConfigureBase extends BaseActivity {
 			updateIntent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
 			updateIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,
 					appWidgetId);
-			updateIntent.putExtra("widgetSize", widgetSize);
+			updateIntent.putExtra(INTENT_EXTRA_NAME_WIDGET_SIZE, widgetSize);
 			getBaseContext().sendBroadcast(updateIntent);
 			finish();
 		}

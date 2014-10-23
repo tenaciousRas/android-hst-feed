@@ -33,6 +33,7 @@ import android.widget.RemoteViews;
 
 import com.longevitysoft.android.appwidget.hstfeed.Constants;
 import com.longevitysoft.android.appwidget.hstfeed.R;
+import com.longevitysoft.android.appwidget.hstfeed.activity.HSTFeedConfigureBase;
 import com.longevitysoft.android.appwidget.hstfeed.activity.HSTFeedWidgetTouchOptions;
 import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService;
 
@@ -65,7 +66,8 @@ public class HSTFeedUtil {
 		}
 		RemoteViews ret = view;
 		Intent configIntent = new Intent(ctx, HSTFeedWidgetTouchOptions.class);
-		configIntent.putExtra("widgetSize", size);
+		configIntent.putExtra(
+				HSTFeedConfigureBase.INTENT_EXTRA_NAME_WIDGET_SIZE, size);
 		configIntent.putExtra("appWidgetId", appWidgetId);
 		configIntent.putExtra("widget", widget);
 		configIntent.putExtra("imageData", imgData);

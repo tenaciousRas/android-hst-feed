@@ -43,6 +43,7 @@ import android.widget.RemoteViews;
 
 import com.longevitysoft.android.appwidget.hstfeed.Constants;
 import com.longevitysoft.android.appwidget.hstfeed.R;
+import com.longevitysoft.android.appwidget.hstfeed.activity.HSTFeedConfigureBase;
 import com.longevitysoft.android.appwidget.hstfeed.async.HSTFeedXMLWorker;
 import com.longevitysoft.android.appwidget.hstfeed.handler.HSTFeedXMLWorkerHandler;
 import com.longevitysoft.android.appwidget.hstfeed.handler.HSTFeedXMLWorkerHandler.HSTFeedXMLWorkerListener;
@@ -166,7 +167,8 @@ public class HSTFeedService extends Service implements HSTFeedXMLWorkerListener 
 		if (null == downloadInProgress) {
 			downloadInProgress = new HashMap<Integer, Boolean>();
 		}
-		int widgetSize = intent.getIntExtra("widgetSize", SIZE_SMALL);
+		int widgetSize = intent.getIntExtra(
+				HSTFeedConfigureBase.INTENT_EXTRA_NAME_WIDGET_SIZE, SIZE_SMALL);
 		ImageDB db = ImageDB.getInstance(getBaseContext());
 		Bundle widget = db.getWidget(appWidgetId);
 		Bundle imgData = null;

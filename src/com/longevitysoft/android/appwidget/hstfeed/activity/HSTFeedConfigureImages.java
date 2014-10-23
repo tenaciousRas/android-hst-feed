@@ -220,7 +220,7 @@ public class HSTFeedConfigureImages extends BaseActivity implements
 		setContentView(R.layout.config_images);
 		appWidgetId = getIntent().getIntExtra("appWidgetId",
 				AppWidgetManager.INVALID_APPWIDGET_ID);
-		widgetSize = getIntent().getIntExtra("widgetSize",
+		widgetSize = getIntent().getIntExtra(HSTFeedConfigureBase.INTENT_EXTRA_NAME_WIDGET_SIZE,
 				HSTFeedService.SIZE_SMALL);
 		edit = getIntent().getBooleanExtra("edit", false);
 		widget = getIntent().getBundleExtra("widget");
@@ -253,7 +253,9 @@ public class HSTFeedConfigureImages extends BaseActivity implements
 		grid.invalidate();
 		grid.invalidateViews();
 		buildHeaderText();
-		if (edit) {
+		if (edit
+				&& getIntent().hasExtra(
+						HSTFeedConfigureBase.INTENT_EXTRA_NAME_WIDGET_CONFIG_RESET)) {
 			// edit cached images in existing widget
 			ImageDB db = ImageDB.getInstance(this);
 			loadImagesFromCache(db);
@@ -392,7 +394,7 @@ public class HSTFeedConfigureImages extends BaseActivity implements
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		if (requestCode == 10 && resultCode == RESULT_OK) {
 			Intent intent = new Intent(getBaseContext(), HSTFeedService.class);
-			intent.putExtra("widgetSize", HSTFeedService.SIZE_SMALL);
+			intent.putExtra(HSTFeedConfigureBase.INTENT_EXTRA_NAME_WIDGET_SIZE, HSTFeedService.SIZE_SMALL);
 			intent.putExtra("appWidgetId", appWidgetId);
 			getBaseContext().startService(intent);
 			Log.d(TAG, "initial feed update");

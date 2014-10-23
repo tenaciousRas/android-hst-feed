@@ -30,6 +30,7 @@ import android.appwidget.AppWidgetManager;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.ImageView;
@@ -51,7 +52,7 @@ public class HSTFeedFullsizeDisplay extends BaseActivity {
 
 	private static final String TAG = "HSTFeedFullsizeDisplay";
 
-	private int appWidgetId, widgetSize, imageId;
+	private int appWidgetId, imageId;
 	private Bundle widget, imageData;
 	private Float ra, dec, area;
 	private ImageView fullImg;
@@ -62,7 +63,8 @@ public class HSTFeedFullsizeDisplay extends BaseActivity {
 		widget = getIntent().getBundleExtra("widget");
 		appWidgetId = widget.getInt(ImageDBUtil.WIDGETS_ID,
 				AppWidgetManager.INVALID_APPWIDGET_ID);
-		widgetSize = getIntent().getIntExtra("widgetSize",
+		widgetSize = getIntent().getIntExtra(
+				HSTFeedConfigureBase.INTENT_EXTRA_NAME_WIDGET_SIZE,
 				HSTFeedService.SIZE_SMALL);
 		imageData = getIntent().getBundleExtra("imageData");
 		imageId = imageData.getInt(ImageDBUtil.IMAGES_ID);
@@ -97,6 +99,7 @@ public class HSTFeedFullsizeDisplay extends BaseActivity {
 		contentTxt.setText(Float.toString(dec));
 		contentTxt = (TextView) findViewById(R.id.area);
 		contentTxt.setText(Float.toString(area));
+		Log.d(TAG, "oncreate finished");
 	}
 
 	/*

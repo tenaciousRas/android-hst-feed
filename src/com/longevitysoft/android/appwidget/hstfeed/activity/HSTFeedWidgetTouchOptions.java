@@ -151,7 +151,7 @@ public class HSTFeedWidgetTouchOptions extends BaseActivity implements
 		super.onCreate(savedInstanceState);
 		appWidgetId = getIntent().getIntExtra("appWidgetId",
 				AppWidgetManager.INVALID_APPWIDGET_ID);
-		widgetSize = getIntent().getIntExtra("widgetSize",
+		widgetSize = getIntent().getIntExtra(HSTFeedConfigureBase.INTENT_EXTRA_NAME_WIDGET_SIZE,
 				HSTFeedService.SIZE_SMALL);
 		widget = getIntent().getBundleExtra("widget");
 		imageData = getIntent().getBundleExtra("imageData");
@@ -190,7 +190,7 @@ public class HSTFeedWidgetTouchOptions extends BaseActivity implements
 					break;
 				}
 				configIntent.putExtra("appWidgetId", appWidgetId);
-				configIntent.putExtra("widgetSize", widgetSize);
+				configIntent.putExtra(HSTFeedConfigureBase.INTENT_EXTRA_NAME_WIDGET_SIZE, widgetSize);
 				if (null == widget) {
 					configIntent.putExtra("edit", false);
 				} else {
@@ -219,7 +219,7 @@ public class HSTFeedWidgetTouchOptions extends BaseActivity implements
 				Log.d(TAG, "view fullsize");
 				configIntent = new Intent(this, HSTFeedFullsizeDisplay.class);
 				configIntent.putExtra("appWidgetId", appWidgetId);
-				configIntent.putExtra("widgetSize", widgetSize);
+				configIntent.putExtra(HSTFeedConfigureBase.INTENT_EXTRA_NAME_WIDGET_SIZE, widgetSize);
 				configIntent.putExtra("widget", widget);
 				configIntent.putExtra("imageData", imageData);
 				startActivity(configIntent);
@@ -232,7 +232,7 @@ public class HSTFeedWidgetTouchOptions extends BaseActivity implements
 				db.needsUpdate(appWidgetId);
 				Intent intent = new Intent(getBaseContext(),
 						HSTFeedService.class);
-				intent.putExtra("widgetSize", widgetSize);
+				intent.putExtra(HSTFeedConfigureBase.INTENT_EXTRA_NAME_WIDGET_SIZE, widgetSize);
 				intent.putExtra("appWidgetId", appWidgetId);
 				startService(intent);
 				finish();
@@ -248,7 +248,7 @@ public class HSTFeedWidgetTouchOptions extends BaseActivity implements
 					db.setWidgetCurrent(appWidgetId, prevId);
 					db.invalidateWidget(appWidgetId);
 					intent = new Intent(getBaseContext(), HSTFeedService.class);
-					intent.putExtra("widgetSize", widgetSize);
+					intent.putExtra(HSTFeedConfigureBase.INTENT_EXTRA_NAME_WIDGET_SIZE, widgetSize);
 					intent.putExtra("appWidgetId", appWidgetId);
 					startService(intent);
 					manager.updateAppWidget(appWidgetId, views);
@@ -262,7 +262,7 @@ public class HSTFeedWidgetTouchOptions extends BaseActivity implements
 				Log.d(TAG, "edit images");
 				configIntent = new Intent(this, HSTFeedConfigureImages.class);
 				configIntent.putExtra("appWidgetId", appWidgetId);
-				configIntent.putExtra("widgetSize", widgetSize);
+				configIntent.putExtra(HSTFeedConfigureBase.INTENT_EXTRA_NAME_WIDGET_SIZE, widgetSize);
 				configIntent.putExtra("edit", true);
 				configIntent.putExtra("widget", widget);
 				startActivity(configIntent);
@@ -284,7 +284,7 @@ public class HSTFeedWidgetTouchOptions extends BaseActivity implements
 					break;
 				}
 				configIntent.putExtra("appWidgetId", appWidgetId);
-				configIntent.putExtra("widgetSize", widgetSize);
+				configIntent.putExtra(HSTFeedConfigureBase.INTENT_EXTRA_NAME_WIDGET_SIZE, widgetSize);
 				configIntent.putExtra("edit", true);
 				configIntent.putExtra("widget", widget);
 				startActivity(configIntent);

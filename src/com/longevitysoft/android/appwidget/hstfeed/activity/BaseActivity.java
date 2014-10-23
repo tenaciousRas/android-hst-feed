@@ -65,7 +65,7 @@ public abstract class BaseActivity extends Activity {
 		Log.v(TAG, "OnCreate");
 		Intent intent = getIntent();
 		if (intent != null) {
-			widgetSize = intent.getIntExtra("widgetSize",
+			widgetSize = intent.getIntExtra(HSTFeedConfigureBase.INTENT_EXTRA_NAME_WIDGET_SIZE,
 					HSTFeedService.SIZE_SMALL);
 		} else {
 			widgetSize = HSTFeedService.SIZE_SMALL;

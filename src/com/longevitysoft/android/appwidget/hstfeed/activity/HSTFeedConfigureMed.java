@@ -40,6 +40,6 @@ public class HSTFeedConfigureMed extends HSTFeedConfigureBase {
 	 */
 	@Override
 	protected void readSizeFromIntent(Intent intent) {
-		widgetSize = getIntent().getIntExtra("widgetSize", HSTFeedService.SIZE_MEDIUM);
+		widgetSize = getIntent().getIntExtra(HSTFeedConfigureBase.INTENT_EXTRA_NAME_WIDGET_SIZE, HSTFeedService.SIZE_MEDIUM);
 	}
 }
