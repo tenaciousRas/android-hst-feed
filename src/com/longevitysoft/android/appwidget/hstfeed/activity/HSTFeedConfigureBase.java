@@ -30,9 +30,7 @@ import android.widget.Button;
 import android.widget.EditText;
 
 import com.longevitysoft.android.appwidget.hstfeed.R;
-import com.longevitysoft.android.appwidget.hstfeed.handler.HSTFeedXMLWorkerHandler.HSTFeedXMLWorkerListener;
 import com.longevitysoft.android.appwidget.hstfeed.provider.ImageDB;
-import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService.HSTFeedXML;
 
 /**
  * @author fbeachler
@@ -106,6 +104,7 @@ public abstract class HSTFeedConfigureBase extends BaseActivity {
 						HSTFeedConfigureImages.class);
 				intent.putExtra("appWidgetId", appWidgetId);
 				intent.putExtra("widgetSize", widgetSize);
+				intent.putExtra("edit", edit);
 				if (null == widget) {
 					widget = new Bundle();
 				}
@@ -131,7 +130,7 @@ public abstract class HSTFeedConfigureBase extends BaseActivity {
 				widget.putFloat("area", fVal);
 				if (!edit) {
 					// store widget
-					db.createWidget(appWidgetId,
+					db.createWidget(appWidgetId, widgetSize,
 							HSTFeedConfigureBase.TYPE_LOCAL, 0,
 							widget.getFloat("ra", 0f),
 							widget.getFloat("dec", 0f),
@@ -145,6 +144,7 @@ public abstract class HSTFeedConfigureBase extends BaseActivity {
 							|| !origDec.equals(widget.getFloat("dec"))
 							|| !origArea.equals(widget.getFloat("area"))) {
 						// delete cached images if ra, dec, or area change
+						// FIXME could get ANR here
 						db.deleteAllImages(appWidgetId);
 					}
 				}
@@ -187,7 +187,15 @@ public abstract class HSTFeedConfigureBase extends BaseActivity {
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
 		if (resultCode == RESULT_OK) {
-			setConfigResult(resultCode);
+			if (!edit) {
+				setConfigResult(resultCode);
+			}
+			Intent updateIntent = new Intent();
+			updateIntent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+			updateIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,
+					appWidgetId);
+			updateIntent.putExtra("widgetSize", widgetSize);
+			getBaseContext().sendBroadcast(updateIntent);
 			finish();
 		}
 	}
@@ -197,59 +205,9 @@ public abstract class HSTFeedConfigureBase extends BaseActivity {
 	 */
 	private void setConfigResult(int resultCode) {
 		final Intent intent = new Intent();
+		intent.setAction(AppWidgetManager.ACTION_APPWIDGET_ENABLED);
 		intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
 		setResult(resultCode, intent);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.longevitysoft.android.appwidget.hstfeed.activity.BaseActivity#
-	 * onFeedParseStart()
-	 */
-	@Override
-	public void onFeedParseStart() {
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.longevitysoft.android.appwidget.hstfeed.activity.BaseActivity#
-	 * onFeedXMLLoaded(int)
-	 */
-	@Override
-	public void onFeedXMLLoaded(int numImages) {
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.longevitysoft.android.appwidget.hstfeed.activity.BaseActivity#
-	 * onFeedImageLoaded(java.lang.String)
-	 */
-	@Override
-	public void onFeedImageLoaded(final String imgSrc) {
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.longevitysoft.android.appwidget.hstfeed.activity.BaseActivity#
-	 * onFeedAllImagesLoaded
-	 * (com.longevitysoft.android.appwidget.hstfeed.service.
-	 * HSTFeedService.HSTFeedXML)
-	 */
-	@Override
-	public void onFeedAllImagesLoaded(final HSTFeedXML feed) {
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.longevitysoft.android.appwidget.hstfeed.activity.BaseActivity#
-	 * onFeedParseComplete()
-	 */
-	@Override
-	public void onFeedParseComplete() {
-	}
 }

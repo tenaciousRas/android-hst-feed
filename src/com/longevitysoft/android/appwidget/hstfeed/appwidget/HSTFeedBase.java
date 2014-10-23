@@ -21,15 +21,17 @@
  */
 package com.longevitysoft.android.appwidget.hstfeed.appwidget;
 
-import com.longevitysoft.android.appwidget.hstfeed.provider.ImageDB;
-import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService;
-
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Bundle;
 import android.util.Log;
+
+import com.longevitysoft.android.appwidget.hstfeed.provider.ImageDB;
+import com.longevitysoft.android.appwidget.hstfeed.provider.ImageDBUtil;
+import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService;
 
 /**
  * @author fbeachler
@@ -58,6 +60,8 @@ public abstract class HSTFeedBase extends AppWidgetProvider {
 					context, HSTFeedBase.class));
 		}
 		for (int appWidgetId : appWidgetIds) {
+			Log.d(TAG, "onUpdate appWidgetId=" + appWidgetId + ", widgetSize="
+					+ getWidgetSize());
 			Intent intent = new Intent(context, HSTFeedService.class);
 			intent.putExtra("widgetSize", getWidgetSize());
 			intent.putExtra("appWidgetId", appWidgetId);
@@ -75,27 +79,43 @@ public abstract class HSTFeedBase extends AppWidgetProvider {
 	@Override
 	public void onReceive(Context context, Intent intent) {
 		super.onReceive(context, intent);
-		Log.d(TAG, "onReceive action=" + intent.getAction());
-		if (AppWidgetManager.ACTION_APPWIDGET_DELETED
-				.equals(intent.getAction())) {
-			int appWidgetId = intent.getIntExtra(
-					AppWidgetManager.EXTRA_APPWIDGET_ID,
-					AppWidgetManager.INVALID_APPWIDGET_ID);
-			ImageDB db = ImageDB.getInstance(context);
-			db.deleteWidget(appWidgetId);
-			onDeleted(context, new int[] { appWidgetId });
-		}
-		if (AppWidgetManager.ACTION_APPWIDGET_ENABLED
-				.equals(intent.getAction())
-				|| AppWidgetManager.ACTION_APPWIDGET_UPDATE.equals(intent
-						.getAction())) {
-			int appWidgetId = intent.getIntExtra(
-					AppWidgetManager.EXTRA_APPWIDGET_ID,
-					AppWidgetManager.INVALID_APPWIDGET_ID);
-			Intent servIntent = new Intent(context, HSTFeedService.class);
-			servIntent.putExtra("widgetSize", getWidgetSize());
-			servIntent.putExtra("appWidgetId", appWidgetId);
-			context.startService(servIntent);
+		int appWidgetId = intent.getIntExtra(
+				AppWidgetManager.EXTRA_APPWIDGET_ID,
+				AppWidgetManager.INVALID_APPWIDGET_ID);
+		Log.d(TAG, "onReceive action=" + intent.getAction() + ", appWidgetId="
+				+ appWidgetId + ", widgetSize=" + getWidgetSize());
+		if (AppWidgetManager.INVALID_APPWIDGET_ID != appWidgetId) {
+			if (AppWidgetManager.ACTION_APPWIDGET_DELETED.equals(intent
+					.getAction())) {
+				ImageDB db = ImageDB.getInstance(context);
+				db.deleteWidget(appWidgetId);
+				onDeleted(context, new int[] { appWidgetId });
+			}
+			if (AppWidgetManager.ACTION_APPWIDGET_ENABLED.equals(intent
+					.getAction())
+					|| AppWidgetManager.ACTION_APPWIDGET_UPDATE.equals(intent
+							.getAction())) {
+				ImageDB db = ImageDB.getInstance(context);
+				Bundle widget = db.getWidget(appWidgetId);
+				Intent servIntent = new Intent(context, HSTFeedService.class);
+				servIntent.putExtra("appWidgetId", appWidgetId);
+				if (null == widget) {
+					// widget not saved, build empty view
+					servIntent.putExtra("widgetSize",
+							intent.getIntExtra("widgetSize", getWidgetSize()));
+					context.startService(servIntent);
+				} else {
+					// only start service if provider same size as stored widget
+					if (widget.getInt(ImageDBUtil.WIDGETS_SIZE) == getWidgetSize()) {
+						// cycle images
+						db.invalidateWidget(appWidgetId);
+						db.needsUpdate(appWidgetId);
+						// build remote view
+						servIntent.putExtra("widgetSize", getWidgetSize());
+						context.startService(servIntent);
+					}
+				}
+			}
 		}
 	}
 }

@@ -15,27 +15,19 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 
-import android.appwidget.AppWidgetManager;
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Bundle;
 import android.os.Message;
+import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.View;
-import android.widget.RemoteViews;
 
 import com.longevitysoft.android.appwidget.hstfeed.Constants;
-import com.longevitysoft.android.appwidget.hstfeed.R;
-import com.longevitysoft.android.appwidget.hstfeed.activity.HSTFeedFullsizeDisplay;
 import com.longevitysoft.android.appwidget.hstfeed.handler.HSTFeedXMLWorkerHandler;
 import com.longevitysoft.android.appwidget.hstfeed.provider.ImageDB;
-import com.longevitysoft.android.appwidget.hstfeed.provider.ImageDBUtil;
 import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService;
 import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService.HSTFeedXML;
 import com.longevitysoft.android.appwidget.hstfeed.service.HSTImage;
-import com.longevitysoft.android.appwidget.hstfeed.util.HSTFeedUtil;
 
 /**
  * Parse XML feed and download feed images in background.
@@ -46,11 +38,6 @@ import com.longevitysoft.android.appwidget.hstfeed.util.HSTFeedUtil;
 public class HSTFeedXMLWorker extends AsyncTask<String, Void, HSTFeedXML> {
 
 	public static final String TAG = "HSTFeedXMLWorker";
-
-	/**
-	 * OS widget mgr.
-	 */
-	private AppWidgetManager manager;
 
 	/**
 	 * Context for this instance.
@@ -72,6 +59,13 @@ public class HSTFeedXMLWorker extends AsyncTask<String, Void, HSTFeedXML> {
 	 */
 	private int widgetSize = HSTFeedService.SIZE_SMALL;
 
+	protected Message buildBaseHandlerMsg() {
+		Message msg = workerHandler.obtainMessage();
+		msg.arg1 = appWidgetId;
+		msg.arg2 = widgetSize;
+		return msg;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -80,14 +74,14 @@ public class HSTFeedXMLWorker extends AsyncTask<String, Void, HSTFeedXML> {
 	@Override
 	protected HSTFeedXML doInBackground(String... params) {
 		Log.d(TAG, "doInBackground started");
-		if (null != workerHandler) {
-			Message msg = workerHandler.obtainMessage();
-			msg.what = HSTFeedXMLWorkerHandler.MSG_WHAT_FEED_PARSE_STARTED;
-			msg.sendToTarget();
-		}
 		// download feed
 		appWidgetId = Integer.parseInt(params[0]);
 		widgetSize = Integer.parseInt(params[1]);
+		if (null != workerHandler) {
+			Message msg = buildBaseHandlerMsg();
+			msg.what = HSTFeedXMLWorkerHandler.MSG_WHAT_FEED_PARSE_STARTED;
+			msg.sendToTarget();
+		}
 		ImageDB db = ImageDB.getInstance(ctx);
 		String url = params[2] + Constants.QUESTION
 				+ HSTFeedService.QUERY_PARAM_NAME_POS + Constants.EQUALS
@@ -101,9 +95,9 @@ public class HSTFeedXMLWorker extends AsyncTask<String, Void, HSTFeedXML> {
 			feedImages = parsedFeed.getImageList();
 		}
 		if (null != workerHandler) {
-			Message msg = workerHandler.obtainMessage();
+			Message msg = buildBaseHandlerMsg();
 			msg.what = HSTFeedXMLWorkerHandler.MSG_WHAT_FEED_XML_LOADED;
-			msg.arg1 = feedImages.size();
+			msg.obj = feedImages.size();
 			msg.sendToTarget();
 		}
 		int insertCnt = 0;
@@ -112,8 +106,7 @@ public class HSTFeedXMLWorker extends AsyncTask<String, Void, HSTFeedXML> {
 			for (HSTImage feedImage : feedImages) {
 				byte[] imgData = downloadImage(
 						transformArchiveUrlToImageUrl(
-								feedImage.getArchiveUrl(), widgetSize))
-						.toByteArray();
+								feedImage.getArchiveUrl(), ctx)).toByteArray();
 				if (imgData.length > 0) {
 					// store immediately
 					db.setImage(appWidgetId, feedImage.getName(),
@@ -123,7 +116,7 @@ public class HSTFeedXMLWorker extends AsyncTask<String, Void, HSTFeedXML> {
 							insertCnt, imgData);
 					// notify handler
 					if (null != workerHandler) {
-						Message msg = workerHandler.obtainMessage();
+						Message msg = buildBaseHandlerMsg();
 						msg.what = HSTFeedXMLWorkerHandler.MSG_WHAT_FEED_IMAGE_LOADED;
 						msg.obj = feedImage.getArchiveUrl();
 						msg.sendToTarget();
@@ -144,89 +137,17 @@ public class HSTFeedXMLWorker extends AsyncTask<String, Void, HSTFeedXML> {
 	@Override
 	protected void onPostExecute(HSTFeedXML parsedFeed) {
 		Log.d(TAG, "onPostExecute started");
-		ImageDB db = ImageDB.getInstance(ctx);
-		Bundle widget = db.getWidget(appWidgetId);
-		if (null == widget) {
-			Log.w(TAG,
-					"something is awry, could not retrieve widget that was just updated");
-			return;
-		}
 		// notify handler
 		if (null != workerHandler) {
-			Message msg = workerHandler.obtainMessage();
+			Message msg = buildBaseHandlerMsg();
 			msg.what = HSTFeedXMLWorkerHandler.MSG_WHAT_FEED_IMAGES_ALL_LOADED;
 			msg.obj = parsedFeed;
 			msg.sendToTarget();
-		}
-		// build views
-		RemoteViews view = null;
-		if (parsedFeed != null && null != parsedFeed.getImageList()
-				&& parsedFeed.getImageList().size() > 0 && appWidgetId > -1) {
-			int current = widget.getInt(ImageDBUtil.WIDGETS_CURRENT);
-			view = new RemoteViews(ctx.getPackageName(),
-					R.layout.widget_layout_sm);
-			// calc optimal sample widgetSize
-			int sampleSize = HSTFeedUtil.calcBitmapScaleFactor(widgetSize,
-					db.getImageBitmapBounds(appWidgetId, current));
-			// load bitmap and image meta data
-			Bitmap dbbm = db.getImageBitmap(appWidgetId, current, sampleSize);
-			Bundle imgData = db.getImageMeta(appWidgetId, current);
-			if (imgData.getString(ImageDBUtil.IMAGES_FILEPATH) == null) {
-				Log.w(TAG,
-						"something is awry - could not get the cached file path for the file just downloaded");
-				return;
-			}
-			if (dbbm != null) {
-				view.setViewVisibility(R.id.hst_img_loading, View.INVISIBLE);
-				view.setViewVisibility(R.id.label_credits, View.VISIBLE);
-				view.setViewVisibility(R.id.credits, View.VISIBLE);
-				view.setViewVisibility(R.id.name, View.VISIBLE);
-				view.setImageViewBitmap(R.id.hst_img, dbbm);
-				if (imgData.getString(ImageDBUtil.IMAGES_NAME) != null) {
-					view.setTextViewText(R.id.name, HSTFeedFullsizeDisplay
-							.toTitleCase(imgData
-									.getString(ImageDBUtil.IMAGES_NAME)));
-				}
-				if (imgData.getString(ImageDBUtil.IMAGES_CREDITS) != null) {
-					view.setTextViewText(R.id.credits,
-							imgData.getString(ImageDBUtil.IMAGES_CREDITS));
-				}
-				// set click intent
-				view = HSTFeedUtil.buildWidgetClickIntent(view, ctx,
-						appWidgetId, widgetSize, widget, imgData);
-			}
-		} else if (parsedFeed != null
-				&& (null != parsedFeed.getImageList() && parsedFeed
-						.getImageList().size() < 1)) {
-			view = new RemoteViews(ctx.getPackageName(),
-					R.layout.widget_layout_empty);
-			// set text content based on widget widgetSize
-			view.setTextViewText(R.id.content, String.format(
-					ctx.getString(R.string.no_images_found),
-					widget.getFloat("ra"), widget.getFloat("dec"),
-					widget.getFloat("area")));
-			view = HSTFeedUtil.buildWidgetClickIntent(view, ctx, appWidgetId,
-					widgetSize, widget, null);
-		} else {
-			view = new RemoteViews(ctx.getPackageName(),
-					R.layout.widget_layout_empty);
-			view.setTextViewText(R.id.content,
-					ctx.getString(R.string.download_images_err_unexpected));
-			view = HSTFeedUtil.buildWidgetClickIntent(view, ctx, appWidgetId,
-					widgetSize, widget, null);
-		}
-		if (null != view) {
-			// update widget
-			if (null == manager) {
-				manager = AppWidgetManager.getInstance(ctx);
-			}
-			manager.updateAppWidget(appWidgetId, view);
-		}
-		if (null != workerHandler) {
-			Message msg = workerHandler.obtainMessage();
+			msg = buildBaseHandlerMsg();
 			msg.what = HSTFeedXMLWorkerHandler.MSG_WHAT_FEED_PARSE_COMPLETE;
 			msg.sendToTarget();
 		}
+		ctx = null;
 		Log.d(TAG, "onPostExecute finished");
 	}
 
@@ -238,6 +159,7 @@ public class HSTFeedXMLWorker extends AsyncTask<String, Void, HSTFeedXML> {
 	@Override
 	protected void onCancelled() {
 		super.onCancelled();
+		ctx = null;
 	}
 
 	/**
@@ -246,14 +168,6 @@ public class HSTFeedXMLWorker extends AsyncTask<String, Void, HSTFeedXML> {
 	 */
 	public void setCtx(Context ctx) {
 		this.ctx = ctx;
-	}
-
-	/**
-	 * @param manager
-	 *            the manager to set
-	 */
-	public void setManager(AppWidgetManager manager) {
-		this.manager = manager;
 	}
 
 	/**
@@ -431,8 +345,7 @@ public class HSTFeedXMLWorker extends AsyncTask<String, Void, HSTFeedXML> {
 	 * @param url
 	 * @return
 	 */
-	private String transformArchiveUrlToImageUrl(final String url,
-			final int widgetSize) {
+	private String transformArchiveUrlToImageUrl(final String url, Context ctx) {
 		if (url == null) {
 			return null;
 		}
@@ -445,14 +358,26 @@ public class HSTFeedXMLWorker extends AsyncTask<String, Void, HSTFeedXML> {
 		transformed.append(parsed.getPathSegments().get(4));
 		transformed.append("-");
 		transformed.append(parsed.getPathSegments().get(6));
-		switch (widgetSize) {
-		case HSTFeedService.SIZE_LARGE:
+		int formFactor = 0; // small images
+		DisplayMetrics metrics = ctx.getResources().getDisplayMetrics();
+		if (null != metrics) {
+			if (640 < metrics.widthPixels) {
+				formFactor = 2;
+			}
+			if (480 < metrics.widthPixels) {
+				formFactor = 1;
+			}
+		}
+		switch (formFactor) {
+		case 2:
 			transformed.append("-large_web.jpg");
 			break;
-		case HSTFeedService.SIZE_MEDIUM:
-		case HSTFeedService.SIZE_SMALL:
-		default:
+		case 1:
 			transformed.append("-web.jpg");
+			break;
+		case 0:
+		default:
+			transformed.append("-small_web.jpg");
 			break;
 		}
 		return transformed.toString();

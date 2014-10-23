@@ -62,7 +62,8 @@ public class HSTFeedFullsizeDisplay extends BaseActivity {
 		widget = getIntent().getBundleExtra("widget");
 		appWidgetId = widget.getInt(ImageDBUtil.WIDGETS_ID,
 				AppWidgetManager.INVALID_APPWIDGET_ID);
-		widgetSize = getIntent().getIntExtra("widgetSize", HSTFeedService.SIZE_SMALL);
+		widgetSize = getIntent().getIntExtra("widgetSize",
+				HSTFeedService.SIZE_SMALL);
 		imageData = getIntent().getBundleExtra("imageData");
 		imageId = imageData.getInt(ImageDBUtil.IMAGES_ID);
 		ra = widget.getFloat("ra", 0f);
@@ -109,23 +110,23 @@ public class HSTFeedFullsizeDisplay extends BaseActivity {
 	protected void onResume() {
 		super.onResume();
 		ImageDB db = ImageDB.getInstance(getBaseContext());
-		Vector<Integer> imgBounds = db.getImageBitmapBounds(appWidgetId,
-				imageId);
-		int sampleSize = HSTFeedUtil.calcBitmapScaleFactor(widgetSize,
-				imgBounds);
-		Bitmap dbbm = db.getImageBitmap(appWidgetId, imageId, sampleSize);
+		Vector<Integer> imgBnds = db.getImageBitmapBounds(appWidgetId, imageId);
 		DisplayMetrics metrics = getBaseContext().getResources()
 				.getDisplayMetrics();
-		if (null != metrics && null != dbbm) {
+		int sampleSize = 1;
+		if (null != metrics && null != imgBnds && 1 < imgBnds.size()) {
 			int scW = metrics.widthPixels;
-			float imgRatio = ((float) dbbm.getHeight() / (float) dbbm
-					.getWidth());
+			float imgRatio = ((float) imgBnds.get(1) / (float) imgBnds.get(0));
 			fullImg.getLayoutParams().height = (int) (scW * imgRatio);
 			fullImg.getLayoutParams().width = scW;
+			sampleSize = HSTFeedUtil.calculateInSampleSize(imgBnds.get(0),
+					imgBnds.get(1), fullImg.getLayoutParams().width,
+					fullImg.getLayoutParams().height);
 		} else {
 			fullImg.getLayoutParams().height = LayoutParams.WRAP_CONTENT;
-			fullImg.getLayoutParams().width = LayoutParams.WRAP_CONTENT;
+			fullImg.getLayoutParams().width = LayoutParams.MATCH_PARENT;
 		}
+		Bitmap dbbm = db.getImageBitmap(appWidgetId, imageId, sampleSize);
 		fullImg.setImageBitmap(dbbm);
 	}
 

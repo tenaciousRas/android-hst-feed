@@ -151,7 +151,8 @@ public class HSTFeedWidgetTouchOptions extends BaseActivity implements
 		super.onCreate(savedInstanceState);
 		appWidgetId = getIntent().getIntExtra("appWidgetId",
 				AppWidgetManager.INVALID_APPWIDGET_ID);
-		widgetSize = getIntent().getIntExtra("widgetSize", HSTFeedService.SIZE_SMALL);
+		widgetSize = getIntent().getIntExtra("widgetSize",
+				HSTFeedService.SIZE_SMALL);
 		widget = getIntent().getBundleExtra("widget");
 		imageData = getIntent().getBundleExtra("imageData");
 		// setup UI options list
@@ -229,10 +230,11 @@ public class HSTFeedWidgetTouchOptions extends BaseActivity implements
 				Log.d(TAG, "next image");
 				db.invalidateWidget(appWidgetId);
 				db.needsUpdate(appWidgetId);
-				views = feedService.buildRemoteViews(this, appWidgetId,
-						widgetSize);
-				manager.updateAppWidget(appWidgetId, views);
-				db.invalidateWidget(appWidgetId);
+				Intent intent = new Intent(getBaseContext(),
+						HSTFeedService.class);
+				intent.putExtra("widgetSize", widgetSize);
+				intent.putExtra("appWidgetId", appWidgetId);
+				startService(intent);
 				finish();
 				break;
 			case 2:
@@ -245,8 +247,10 @@ public class HSTFeedWidgetTouchOptions extends BaseActivity implements
 				if (null != prevId) {
 					db.setWidgetCurrent(appWidgetId, prevId);
 					db.invalidateWidget(appWidgetId);
-					views = feedService.buildRemoteViews(this, appWidgetId,
-							widgetSize);
+					intent = new Intent(getBaseContext(), HSTFeedService.class);
+					intent.putExtra("widgetSize", widgetSize);
+					intent.putExtra("appWidgetId", appWidgetId);
+					startService(intent);
 					manager.updateAppWidget(appWidgetId, views);
 				} else {
 					Log.d(TAG, "unable to set previous image, aborting");

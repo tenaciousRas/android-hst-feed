@@ -21,11 +21,18 @@
  */
 package com.longevitysoft.android.appwidget.hstfeed.activity;
 
+import java.lang.ref.WeakReference;
+
 import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.graphics.Bitmap;
 import android.os.Bundle;
-import android.os.Looper;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Message;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -35,10 +42,12 @@ import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.GridView;
 import android.widget.ProgressBar;
+import android.widget.RemoteViews;
 import android.widget.TextView;
 
 import com.longevitysoft.android.appwidget.hstfeed.R;
 import com.longevitysoft.android.appwidget.hstfeed.adapter.ImageAdapter;
+import com.longevitysoft.android.appwidget.hstfeed.handler.HSTFeedXMLWorkerHandler.HSTFeedXMLWorkerListener;
 import com.longevitysoft.android.appwidget.hstfeed.provider.ImageDB;
 import com.longevitysoft.android.appwidget.hstfeed.provider.ImageDBUtil;
 import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService;
@@ -50,7 +59,8 @@ import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService.HSTFee
  * @author fbeachler
  * 
  */
-public class HSTFeedConfigureImages extends BaseActivity {
+public class HSTFeedConfigureImages extends BaseActivity implements
+		HSTFeedXMLWorkerListener {
 
 	public static final String TAG = "HSTFeedConfigureImages";
 
@@ -90,6 +100,112 @@ public class HSTFeedConfigureImages extends BaseActivity {
 	 */
 	private Bundle widget;
 
+	/**
+	 * Handler for messages from service.
+	 */
+	protected ServiceHandler sHandler;
+
+	/**
+	 * Intent to bind HST Feed service.
+	 */
+	protected Intent mServiceBindIntent;
+
+	/**
+	 * HST Feed Service for downloading XML feed and images.
+	 */
+	protected HSTFeedService feedService;
+
+	/**
+	 * Flag if service is bound.
+	 */
+	protected boolean feedServiceBound = false;
+
+	public static class ServiceHandler extends Handler {
+
+		private WeakReference<HSTFeedConfigureImages> activity;
+
+		/**
+		 * @param activity
+		 *            the activity to set
+		 */
+		public void setActivity(WeakReference<HSTFeedConfigureImages> activity) {
+			this.activity = activity;
+		}
+
+		@Override
+		public void handleMessage(Message msg) {
+			// Log.v(TAG, new
+			// StringBuilder().append("#handleMessage - msg.what=")
+			// .append(msg.what).append(", msg.data=").append(msg.getData())
+			// .append(", msg.arg1=").append(msg.arg1).toString());
+			Bundle data = msg.getData();
+			Thread t = null;
+			switch (msg.what) {
+			case HSTFeedService.WHAT_REMOTE_VIEWS:
+				Log.d(TAG, "got remote views from service");
+				final int appWidgetId = msg.arg1;
+				final RemoteViews rv = data
+						.getParcelable(HSTFeedService.BUNDLE_NAME_REMOTE_VIEWS);
+				t = new Thread() {
+
+					@Override
+					public void run() {
+						activity.get().runOnUiThread(new Runnable() {
+							public void run() {
+								AppWidgetManager manager = AppWidgetManager
+										.getInstance(activity.get()
+												.getBaseContext());
+								manager.updateAppWidget(appWidgetId, rv);
+							}
+						});
+					}
+
+				};
+				t.start();
+				break;
+			default:
+				super.handleMessage(msg);
+			}
+		}
+	}
+
+	protected ServiceConnection mServiceConnection = new ServiceConnection() {
+		public void onServiceDisconnected(ComponentName arg0) {
+			Log.i(TAG, "BaseActivity::onServiceDisconnected");
+			feedService.removeXMLWorkerListener(HSTFeedConfigureImages.this);
+			feedService = null;
+			feedServiceBound = false;
+		}
+
+		public void onServiceConnected(ComponentName comp, IBinder binder) {
+			Log.i(TAG, "BaseActivity::onServiceConnected");
+			feedService = ((HSTFeedService.LocalBinder) binder).getService();
+			feedServiceBound = true;
+			handleOnServiceConnected();
+		}
+	};
+
+	/**
+	 * @return the mServiceBindIntent
+	 */
+	public Intent getBindIntent() {
+		return mServiceBindIntent;
+	}
+
+	/**
+	 * @return the feedService
+	 */
+	public HSTFeedService getfeedService() {
+		return feedService;
+	}
+
+	/**
+	 * @return the sHandler
+	 */
+	public Handler getServiceHandler() {
+		return sHandler;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -97,6 +213,7 @@ public class HSTFeedConfigureImages extends BaseActivity {
 	 * com.longevitysoft.android.appwidget.hstfeed.activity.BaseActivity#onCreate
 	 * (android.os.Bundle)
 	 */
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -117,6 +234,9 @@ public class HSTFeedConfigureImages extends BaseActivity {
 		adapter = new ImageAdapter(this);
 		grid.setAdapter(adapter);
 		initLayoutListeners();
+		// init background feed loader
+		sHandler = new ServiceHandler();
+		sHandler.setActivity(new WeakReference<HSTFeedConfigureImages>(this));
 		Log.d(TAG, "edit mode=" + edit);
 	}
 
@@ -133,6 +253,15 @@ public class HSTFeedConfigureImages extends BaseActivity {
 		grid.invalidate();
 		grid.invalidateViews();
 		buildHeaderText();
+		if (edit) {
+			// edit cached images in existing widget
+			ImageDB db = ImageDB.getInstance(this);
+			loadImagesFromCache(db);
+		} else {
+			mServiceBindIntent = new Intent(this, HSTFeedService.class);
+			bindService(mServiceBindIntent, mServiceConnection,
+					Context.BIND_AUTO_CREATE);
+		}
 	}
 
 	/*
@@ -145,7 +274,31 @@ public class HSTFeedConfigureImages extends BaseActivity {
 	@Override
 	protected void onPause() {
 		super.onPause();
-		feedService.removeXMLWorkerListener(this);
+		if (feedServiceBound) {
+			try {
+				feedService.removeXMLWorkerListener(this);
+				unbindService(mServiceConnection);
+			} catch (Exception e) {
+				Log.d(TAG,
+						"unable to unbind service connection, exception was:\n"
+								+ Log.getStackTraceString(e));
+			}
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see android.app.Activity#onDestroy()
+	 */
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		if (null != bmps) {
+			for (Bitmap bmp : bmps) {
+				bmp.recycle();
+			}
+		}
 	}
 
 	/*
@@ -277,6 +430,16 @@ public class HSTFeedConfigureImages extends BaseActivity {
 		}
 	}
 
+	/**
+	 * Called when service connected.
+	 */
+	public void handleOnServiceConnected() {
+		feedService.addXMLWorkerListener(this);
+		if (!edit) {
+			feedService.loadFeedInBackground(appWidgetId, widgetSize, widget);
+		}
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -284,8 +447,7 @@ public class HSTFeedConfigureImages extends BaseActivity {
 	 * onFeedParseStart()
 	 */
 	@Override
-	public void onFeedParseStart() {
-		super.onFeedParseStart();
+	public void onFeedParseStart(final int appWidgetId, final int widgetSize) {
 		runOnUiThread(new Runnable() {
 
 			@Override
@@ -303,8 +465,8 @@ public class HSTFeedConfigureImages extends BaseActivity {
 	 * onFeedXMLLoaded(int)
 	 */
 	@Override
-	public void onFeedXMLLoaded(final int numImages) {
-		super.onFeedXMLLoaded(numImages);
+	public void onFeedXMLLoaded(final int appWidgetId, final int widgetSize,
+			final int numImages) {
 		loaderNumImagesTotal = numImages;
 		runOnUiThread(new Runnable() {
 
@@ -322,8 +484,8 @@ public class HSTFeedConfigureImages extends BaseActivity {
 	 * onFeedImageLoaded(java.lang.String)
 	 */
 	@Override
-	public void onFeedImageLoaded(final String imgSrc) {
-		super.onFeedImageLoaded(imgSrc);
+	public void onFeedImageLoaded(final int appWidgetId, final int widgetSize,
+			final String imgSrc) {
 		loaderNumImagesLoaded++;
 		runOnUiThread(new Runnable() {
 
@@ -345,15 +507,23 @@ public class HSTFeedConfigureImages extends BaseActivity {
 	 * HSTFeedService.HSTFeedXML)
 	 */
 	@Override
-	public void onFeedAllImagesLoaded(final HSTFeedXML feed) {
-		super.onFeedAllImagesLoaded(feed);
+	public void onFeedAllImagesLoaded(final int appWidgetId,
+			final int widgetSize, final HSTFeedXML feed) {
 		runOnUiThread(new Runnable() {
 
 			@Override
 			public void run() {
-				header.setText(getString(R.string.download_image_list));
-				ImageDB db = ImageDB.getInstance(getBaseContext());
-				loadImagesFromCache(db);
+				if (0 < loaderNumImagesLoaded) {
+					header.setText(getString(R.string.download_image_list));
+					ImageDB db = ImageDB.getInstance(getBaseContext());
+					loadImagesFromCache(db);
+				} else {
+					header.setText(String.format(
+							getString(R.string.no_images_found),
+							widget.getFloat(ImageDBUtil.WIDGETS_RA),
+							widget.getFloat(ImageDBUtil.WIDGETS_DEC),
+							widget.getFloat(ImageDBUtil.WIDGETS_AREA)));
+				}
 				loadProg.setVisibility(View.INVISIBLE);
 			}
 		});
@@ -366,30 +536,10 @@ public class HSTFeedConfigureImages extends BaseActivity {
 	 * onFeedParseComplete()
 	 */
 	@Override
-	public void onFeedParseComplete() {
-		super.onFeedParseComplete();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.longevitysoft.android.appwidget.hstfeed.activity.BaseActivity#
-	 * handleOnServiceConnected()
-	 */
-	@Override
-	public void handleOnServiceConnected() {
-		feedService.addXMLWorkerListener(this);
-		ok.setEnabled(true);
-		if (edit) {
-			// edit cached images in existing widget
-			ImageDB db = ImageDB.getInstance(this);
-			loadImagesFromCache(db);
-		} else {
-			feedService.loadFeedInBackground(appWidgetId, widgetSize,
-					widget.getFloat(ImageDBUtil.WIDGETS_RA),
-					widget.getFloat(ImageDBUtil.WIDGETS_DEC),
-					widget.getFloat(ImageDBUtil.WIDGETS_AREA));
-		}
+	public void onFeedParseComplete(final int appWidgetId, final int widgetSize) {
+		ImageDB db = ImageDB.getInstance(getBaseContext());
+		db.invalidateWidget(appWidgetId);
+		db.needsUpdate(appWidgetId);
 	}
 
 	/**
@@ -419,12 +569,12 @@ public class HSTFeedConfigureImages extends BaseActivity {
 
 			@Override
 			public void onClick(View v) {
-				Intent updateIntent = new Intent();
-				updateIntent
-						.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-				updateIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,
-						appWidgetId);
-				getBaseContext().sendBroadcast(updateIntent);
+				// Intent updateIntent = new Intent();
+				// updateIntent
+				// .setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+				// updateIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,
+				// appWidgetId);
+				// getBaseContext().sendBroadcast(updateIntent);
 				setResult(RESULT_OK);
 				finish();
 			}
@@ -442,9 +592,11 @@ public class HSTFeedConfigureImages extends BaseActivity {
 			Log.w(TAG, "unexpected error when loading images from cache.");
 			return;
 		}
-		Bundle bundle = db.getWidgetImages(appWidgetId, 4); // hardcoded
-		// sample
-		// widgetSize
+		/**
+		 * get widget images as bundle - legacy arch. use hardcoded sample size
+		 * = 8 to reduce bitmap memory footprint
+		 */
+		Bundle bundle = db.getWidgetImages(appWidgetId, 4);
 		bmps = (Bitmap[]) bundle.getParcelableArray("images");
 		hydrateGridAdapter(bmps, adapter);
 		if (bmps.length > 0) {

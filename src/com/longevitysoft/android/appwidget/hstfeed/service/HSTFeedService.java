@@ -22,8 +22,12 @@
 package com.longevitysoft.android.appwidget.hstfeed.service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Vector;
 
+import android.annotation.SuppressLint;
 import android.app.Service;
 import android.appwidget.AppWidgetManager;
 import android.content.Context;
@@ -67,6 +71,10 @@ public class HSTFeedService extends Service implements HSTFeedXMLWorkerListener 
 
 	public static final String BUNDLE_NAME_REMOTE_VIEWS = "views.remote";
 
+	/**
+	 * @author fbeachler
+	 * 
+	 */
 	public static class HSTFeedXML {
 		List<HSTImage> imageList;
 
@@ -98,20 +106,19 @@ public class HSTFeedService extends Service implements HSTFeedXMLWorkerListener 
 		public static final String TAG = HSTFeedService.TAG + "$LocalBinder";
 
 		public HSTFeedService getService() {
-			Log.i(TAG, "getService");
+			Log.d(TAG, "getService");
 			return HSTFeedService.this;
 		}
 	}
 
 	private final IBinder binder = new LocalBinder();
 	private HSTFeedXMLWorker feedAsync;
-	private List<HSTFeedXMLWorkerListener> xmlWorkerListeners;
 	private HSTFeedXMLWorkerHandler xmlWorkerHandler;
 	private AppWidgetManager manager;
-	private boolean downloadInProgress;
+	private Map<Integer, Boolean> downloadInProgress;
 
+	@SuppressLint("UseSparseArrays")
 	public HSTFeedService() {
-		xmlWorkerListeners = new ArrayList<HSTFeedXMLWorkerListener>();
 		(new Thread(new Runnable() {
 
 			@Override
@@ -119,16 +126,29 @@ public class HSTFeedService extends Service implements HSTFeedXMLWorkerListener 
 				Looper.prepare();
 				xmlWorkerHandler = new HSTFeedXMLWorkerHandler(
 						Looper.myLooper());
+				xmlWorkerHandler.addListener(HSTFeedService.this);
 				Looper.loop();
 			}
 		})).start();
+		downloadInProgress = new HashMap<Integer, Boolean>();
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see android.app.Service#onBind(android.content.Intent)
+	 */
 	@Override
 	public IBinder onBind(Intent intent) {
 		return binder;
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see android.app.Service#onStart(android.content.Intent, int)
+	 */
+	@SuppressLint("UseSparseArrays")
 	@SuppressWarnings("deprecation")
 	@Override
 	public void onStart(Intent intent, int startId) {
@@ -143,11 +163,24 @@ public class HSTFeedService extends Service implements HSTFeedXMLWorkerListener 
 					"widget called with an invalid widget ID, aborting service update.");
 			return;
 		}
-		if (null == xmlWorkerListeners) {
-			xmlWorkerListeners = new ArrayList<HSTFeedXMLWorkerListener>();
+		if (null == downloadInProgress) {
+			downloadInProgress = new HashMap<Integer, Boolean>();
 		}
 		int widgetSize = intent.getIntExtra("widgetSize", SIZE_SMALL);
-		RemoteViews update = buildRemoteViews(this, appWidgetId, widgetSize);
+		ImageDB db = ImageDB.getInstance(getBaseContext());
+		Bundle widget = db.getWidget(appWidgetId);
+		Bundle imgData = null;
+		if (null != widget) {
+			int current = widget.getInt(ImageDBUtil.WIDGETS_CURRENT);
+			imgData = db.getImageMeta(appWidgetId, current);
+		}
+		RemoteViews update = buildRemoteViews(this, appWidgetId, widgetSize,
+				widget, imgData);
+		if ((null == imgData || imgData.getString(ImageDBUtil.IMAGES_FILEPATH) == null)
+				&& !dlInProg(appWidgetId)) {
+			// load feed+images in background
+			loadFeedInBackground(appWidgetId, widgetSize, widget);
+		}
 		manager = AppWidgetManager.getInstance(this);
 		manager.updateAppWidget(appWidgetId, update);
 	}
@@ -160,12 +193,7 @@ public class HSTFeedService extends Service implements HSTFeedXMLWorkerListener 
 	 * .HSTFeedXMLWorkerListener#onFeedParseStart()
 	 */
 	@Override
-	public void onFeedParseStart() {
-		if (null != xmlWorkerListeners) {
-			for (HSTFeedXMLWorkerListener listener : xmlWorkerListeners) {
-				listener.onFeedParseStart();
-			}
-		}
+	public void onFeedParseStart(final int appWidgetId, final int widgetSize) {
 	}
 
 	/*
@@ -176,12 +204,8 @@ public class HSTFeedService extends Service implements HSTFeedXMLWorkerListener 
 	 * .HSTFeedXMLWorkerListener#onFeedXMLLoaded(int)
 	 */
 	@Override
-	public void onFeedXMLLoaded(int numImages) {
-		if (null != xmlWorkerListeners) {
-			for (HSTFeedXMLWorkerListener listener : xmlWorkerListeners) {
-				listener.onFeedXMLLoaded(numImages);
-			}
-		}
+	public void onFeedXMLLoaded(final int appWidgetId, final int widgetSize,
+			final int numImages) {
 	}
 
 	/*
@@ -192,12 +216,8 @@ public class HSTFeedService extends Service implements HSTFeedXMLWorkerListener 
 	 * .HSTFeedXMLWorkerListener#onFeedImageLoaded(java.lang.String)
 	 */
 	@Override
-	public void onFeedImageLoaded(String imgSrc) {
-		if (null != xmlWorkerListeners) {
-			for (HSTFeedXMLWorkerListener listener : xmlWorkerListeners) {
-				listener.onFeedImageLoaded(imgSrc);
-			}
-		}
+	public void onFeedImageLoaded(final int appWidgetId, final int widgetSize,
+			final String imgSrc) {
 	}
 
 	/*
@@ -210,13 +230,8 @@ public class HSTFeedService extends Service implements HSTFeedXMLWorkerListener 
 	 * appwidget.hstfeed.service.HSTFeedService.HSTFeedXML)
 	 */
 	@Override
-	public void onFeedAllImagesLoaded(HSTFeedXML feed) {
-		downloadInProgress = false;
-		if (null != xmlWorkerListeners) {
-			for (HSTFeedXMLWorkerListener listener : xmlWorkerListeners) {
-				listener.onFeedAllImagesLoaded(feed);
-			}
-		}
+	public void onFeedAllImagesLoaded(final int appWidgetId,
+			final int widgetSize, final HSTFeedXML feed) {
 	}
 
 	/*
@@ -227,12 +242,19 @@ public class HSTFeedService extends Service implements HSTFeedXMLWorkerListener 
 	 * .HSTFeedXMLWorkerListener#onFeedParseComplete()
 	 */
 	@Override
-	public void onFeedParseComplete() {
-		if (null != xmlWorkerListeners) {
-			for (HSTFeedXMLWorkerListener listener : xmlWorkerListeners) {
-				listener.onFeedParseComplete();
-			}
+	public void onFeedParseComplete(final int appWidgetId, final int widgetSize) {
+		downloadInProgress.put(appWidgetId, Boolean.valueOf(false));
+		ImageDB db = ImageDB.getInstance(getBaseContext());
+		Bundle widget = db.getWidget(appWidgetId);
+		Bundle imgData = null;
+		if (null != widget) {
+			int current = widget.getInt(ImageDBUtil.WIDGETS_CURRENT);
+			imgData = db.getImageMeta(appWidgetId, current);
 		}
+		RemoteViews update = buildRemoteViews(this, appWidgetId, widgetSize,
+				widget, imgData);
+		manager = AppWidgetManager.getInstance(this);
+		manager.updateAppWidget(appWidgetId, update);
 	}
 
 	/**
@@ -244,7 +266,6 @@ public class HSTFeedService extends Service implements HSTFeedXMLWorkerListener 
 		if (null == xmlWorkerListener) {
 			return;
 		}
-		xmlWorkerListeners.add(xmlWorkerListener);
 		if (null != xmlWorkerHandler) {
 			xmlWorkerHandler.addListener(xmlWorkerListener);
 		}
@@ -259,7 +280,6 @@ public class HSTFeedService extends Service implements HSTFeedXMLWorkerListener 
 		if (null == xmlWorkerListener) {
 			return;
 		}
-		xmlWorkerListeners.remove(xmlWorkerListeners);
 		if (null != xmlWorkerHandler) {
 			xmlWorkerHandler.removeListener(xmlWorkerListener);
 		}
@@ -276,25 +296,22 @@ public class HSTFeedService extends Service implements HSTFeedXMLWorkerListener 
 	 * @param area
 	 */
 	public void loadFeedInBackground(final int appWidgetId,
-			final int widgetSize, final Float ra, final Float dec,
-			final Float area) {
-		(new Thread(new Runnable() {
-
-			@Override
-			public void run() {
-				Looper.prepare();
-				feedAsync = new HSTFeedXMLWorker();
-				feedAsync.setManager(manager);
-				feedAsync.setHSTFeedXMLWorkerHandler(xmlWorkerHandler);
-				feedAsync.setCtx(getBaseContext());
-				downloadInProgress = true;
-				feedAsync.execute(Integer.toString(appWidgetId),
-						Integer.toString(widgetSize), MAST_FEED_URL,
-						Float.toString(ra), Float.toString(dec),
-						Float.toString(area));
-				Looper.loop();
-			}
-		})).start();
+			final int widgetSize, final Bundle widget) {
+		if (null == widget) {
+			Log.w(TAG,
+					"oops!  given blank widget for load in bg call - aborting...");
+			return;
+		}
+		float ra = widget.getFloat(ImageDBUtil.WIDGETS_RA);
+		float dec = widget.getFloat(ImageDBUtil.WIDGETS_DEC);
+		float area = widget.getFloat(ImageDBUtil.WIDGETS_AREA);
+		feedAsync = new HSTFeedXMLWorker();
+		feedAsync.setHSTFeedXMLWorkerHandler(xmlWorkerHandler);
+		feedAsync.setCtx(getBaseContext());
+		downloadInProgress.put(appWidgetId, Boolean.valueOf(true));
+		feedAsync.execute(Integer.toString(appWidgetId),
+				Integer.toString(widgetSize), MAST_FEED_URL,
+				Float.toString(ra), Float.toString(dec), Float.toString(area));
 	}
 
 	/**
@@ -303,12 +320,93 @@ public class HSTFeedService extends Service implements HSTFeedXMLWorkerListener 
 	 * @return
 	 */
 	public RemoteViews buildRemoteViews(Context context, int appWidgetId,
-			int widgetSize) {
+			int widgetSize, Bundle widget, Bundle imgData) {
 		ImageDB db = ImageDB.getInstance(context);
-		Bundle widget = db.getWidget(appWidgetId);
 		if (null == widget) {
 			return buildEmptyView(context, appWidgetId, widgetSize);
 		}
+		RemoteViews view = buildRemoteViewsLayout(context, widgetSize);
+		int current = widget.getInt(ImageDBUtil.WIDGETS_CURRENT);
+		float ra = widget.getFloat(ImageDBUtil.WIDGETS_RA);
+		float dec = widget.getFloat(ImageDBUtil.WIDGETS_DEC);
+		float area = widget.getFloat(ImageDBUtil.WIDGETS_AREA);
+		// set text views based on widget widgetSize
+		switch (widgetSize) {
+		case SIZE_MEDIUM:
+		case SIZE_SMALL:
+			view.setTextViewText(R.id.ra, Float.toString(ra)
+					+ Constants.SEMICOLON + Constants.SPACE);
+			view.setTextViewText(R.id.dec, Float.toString(dec)
+					+ Constants.SEMICOLON + Constants.SPACE);
+			view.setTextViewText(
+					R.id.area,
+					Float.toString(area)
+							+ context.getString(R.string.sym_degree));
+			break;
+		case SIZE_LARGE:
+			view.setTextViewText(R.id.ra, getString(R.string.abbr_ra)
+					+ Constants.SPACE + Float.toString(ra)
+					+ Constants.SEMICOLON + Constants.SPACE);
+			view.setTextViewText(R.id.dec, getString(R.string.dec)
+					+ Constants.SPACE + Float.toString(dec)
+					+ Constants.SEMICOLON + Constants.SPACE);
+			view.setTextViewText(
+					R.id.area,
+					getString(R.string.area) + Constants.SPACE
+							+ Float.toString(area)
+							+ context.getString(R.string.sym_degree));
+			break;
+		}
+		if (dlInProg(appWidgetId)
+				|| imgData.getString(ImageDBUtil.IMAGES_FILEPATH) == null) {
+			// set loading msg
+			view.setViewVisibility(R.id.hst_img_loading, View.VISIBLE);
+			view.setViewVisibility(R.id.label_credits, View.INVISIBLE);
+			view.setViewVisibility(R.id.credits, View.INVISIBLE);
+			view.setViewVisibility(R.id.name, View.INVISIBLE);
+			view.setImageViewResource(R.id.hst_img, R.drawable.ic_feed_loading);
+			view = HSTFeedUtil.buildWidgetClickIntent(view, getBaseContext(),
+					appWidgetId, widgetSize, widget, null);
+		}
+		if (imgData.getString(ImageDBUtil.IMAGES_FILEPATH) != null) {
+			if (imgData.getString(ImageDBUtil.IMAGES_NAME) != null) {
+				view.setTextViewText(R.id.name,
+						imgData.getString(ImageDBUtil.IMAGES_NAME));
+			}
+			if (imgData.getString(ImageDBUtil.IMAGES_CREDITS) != null) {
+				view.setTextViewText(R.id.credits,
+						imgData.getString(ImageDBUtil.IMAGES_CREDITS));
+			}
+			Vector<Integer> imgBnds = db.getImageBitmapBounds(appWidgetId,
+					current);
+			int sampleSize = 1;
+			if (null != imgBnds && imgBnds.size() > 1) {
+				sampleSize = HSTFeedUtil.calculateInSampleSize(imgBnds.get(0),
+						imgBnds.get(1), widgetSize);
+			}
+			Bitmap dbbm = db.getImageBitmap(appWidgetId, current, sampleSize);
+			if (dbbm != null) {
+				view.setViewVisibility(R.id.hst_img_loading, View.INVISIBLE);
+				view.setViewVisibility(R.id.label_credits, View.VISIBLE);
+				view.setViewVisibility(R.id.credits, View.VISIBLE);
+				view.setViewVisibility(R.id.name, View.VISIBLE);
+				view.setImageViewBitmap(R.id.hst_img, dbbm);
+			} else {
+				// TODO set src as image missing from cache
+			}
+			// set click intent
+			view = HSTFeedUtil.buildWidgetClickIntent(view, getBaseContext(),
+					appWidgetId, widgetSize, widget, imgData);
+		}
+		return view;
+	}
+
+	/**
+	 * @param context
+	 * @param widgetSize
+	 * @return
+	 */
+	private RemoteViews buildRemoteViewsLayout(Context context, int widgetSize) {
 		RemoteViews view;
 		switch (widgetSize) {
 		case SIZE_LARGE:
@@ -324,77 +422,6 @@ public class HSTFeedService extends Service implements HSTFeedXMLWorkerListener 
 			view = new RemoteViews(context.getPackageName(),
 					R.layout.widget_layout_sm);
 			break;
-		}
-		int current = widget.getInt(ImageDBUtil.WIDGETS_CURRENT);
-		float ra = widget.getFloat(ImageDBUtil.WIDGETS_RA);
-		float dec = widget.getFloat(ImageDBUtil.WIDGETS_DEC);
-		float area = widget.getFloat(ImageDBUtil.WIDGETS_AREA);
-		// set text views based on widget widgetSize
-		switch (widgetSize) {
-		case SIZE_SMALL:
-			view.setTextViewText(R.id.ra, Float.toString(ra)
-					+ Constants.SEMICOLON + Constants.SPACE);
-			view.setTextViewText(R.id.dec, Float.toString(dec)
-					+ Constants.SEMICOLON + Constants.SPACE);
-			view.setTextViewText(
-					R.id.area,
-					Float.toString(area)
-							+ context.getString(R.string.sym_degree));
-			break;
-		case SIZE_MEDIUM:
-		case SIZE_LARGE:
-			view.setTextViewText(R.id.ra, getString(R.string.abbr_ra)
-					+ Constants.SPACE + Float.toString(ra)
-					+ Constants.SEMICOLON + Constants.SPACE);
-			view.setTextViewText(R.id.dec, getString(R.string.dec)
-					+ Constants.SPACE + Float.toString(dec)
-					+ Constants.SEMICOLON + Constants.SPACE);
-			view.setTextViewText(
-					R.id.area,
-					getString(R.string.area) + Constants.SPACE
-							+ Float.toString(area)
-							+ context.getString(R.string.sym_degree));
-			break;
-		}
-		Bundle imgData = db.getImageMeta(appWidgetId, current);
-		if (downloadInProgress
-				|| imgData.getString(ImageDBUtil.IMAGES_FILEPATH) == null) {
-			// set loading msg
-			view.setViewVisibility(R.id.hst_img_loading, View.VISIBLE);
-			view.setViewVisibility(R.id.label_credits, View.INVISIBLE);
-			view.setViewVisibility(R.id.credits, View.INVISIBLE);
-			view.setViewVisibility(R.id.name, View.INVISIBLE);
-			view.setImageViewResource(R.id.hst_img, R.drawable.ic_feed_loading);
-			view = HSTFeedUtil.buildWidgetClickIntent(view, getBaseContext(),
-					appWidgetId, widgetSize, widget, null);
-		}
-		if (imgData.getString(ImageDBUtil.IMAGES_FILEPATH) == null) {
-			// load feed+images in background
-			loadFeedInBackground(appWidgetId, widgetSize, ra, dec, area);
-		} else {
-			if (imgData.getString(ImageDBUtil.IMAGES_NAME) != null) {
-				view.setTextViewText(R.id.name,
-						imgData.getString(ImageDBUtil.IMAGES_NAME));
-			}
-			if (imgData.getString(ImageDBUtil.IMAGES_CREDITS) != null) {
-				view.setTextViewText(R.id.credits,
-						imgData.getString(ImageDBUtil.IMAGES_CREDITS));
-			}
-			int sampleSize = HSTFeedUtil.calcBitmapScaleFactor(widgetSize,
-					db.getImageBitmapBounds(appWidgetId, current));
-			Bitmap dbbm = db.getImageBitmap(appWidgetId, current, sampleSize);
-			if (dbbm != null) {
-				view.setViewVisibility(R.id.hst_img_loading, View.INVISIBLE);
-				view.setViewVisibility(R.id.label_credits, View.VISIBLE);
-				view.setViewVisibility(R.id.credits, View.VISIBLE);
-				view.setViewVisibility(R.id.name, View.VISIBLE);
-				view.setImageViewBitmap(R.id.hst_img, dbbm);
-			} else {
-				// TODO set image missing from cache as src
-			}
-			// set click intent
-			view = HSTFeedUtil.buildWidgetClickIntent(view, getBaseContext(),
-					appWidgetId, widgetSize, widget, imgData);
 		}
 		return view;
 	}
@@ -412,4 +439,8 @@ public class HSTFeedService extends Service implements HSTFeedXMLWorkerListener 
 		return view;
 	}
 
+	protected boolean dlInProg(int appWidgetId) {
+		return (downloadInProgress.containsKey(Integer.valueOf(appWidgetId)) && downloadInProgress
+				.get(Integer.valueOf(appWidgetId)).booleanValue());
+	}
 }

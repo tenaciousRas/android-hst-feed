@@ -29,6 +29,7 @@ public class ImageDBUtil {
 
 	public static final String TABLE_WIDGETS = "widgets";
 	public static final String WIDGETS_ID = "id";
+	public static final String WIDGETS_SIZE = "widget_size";
 	public static final String WIDGETS_TYPE = "type";
 	public static final String WIDGETS_PERIOD = "period";
 	public static final String WIDGETS_RA = "ra";
@@ -55,12 +56,13 @@ public class ImageDBUtil {
 
 	public static final String buildWidgetsTableSQL() {
 		String ret = "CREATE TABLE " + TABLE_WIDGETS + "(" + WIDGETS_ID
-				+ " INTEGER PRIMARY KEY, " + WIDGETS_TYPE + " INTEGER, "
-				+ WIDGETS_PERIOD + " INTEGER, " + WIDGETS_RA + " TEXT, "
-				+ WIDGETS_DEC + " TEXT, " + WIDGETS_AREA + " TEXT, "
-				+ WIDGETS_ORDER + " INTEGER, " + WIDGETS_CURRENT + " INTEGER, "
-				+ WIDGETS_IMG_LIST_COUNT + " INTEGER, " + WIDGETS_LASTUPDATE
-				+ " INTEGER, " + WIDGETS_UPDATES + " INTEGER);";
+				+ " INTEGER PRIMARY KEY, " + WIDGETS_SIZE + " INTEGER, "
+				+ WIDGETS_TYPE + " INTEGER, " + WIDGETS_PERIOD + " INTEGER, "
+				+ WIDGETS_RA + " TEXT, " + WIDGETS_DEC + " TEXT, "
+				+ WIDGETS_AREA + " TEXT, " + WIDGETS_ORDER + " INTEGER, "
+				+ WIDGETS_CURRENT + " INTEGER, " + WIDGETS_IMG_LIST_COUNT
+				+ " INTEGER, " + WIDGETS_LASTUPDATE + " INTEGER, "
+				+ WIDGETS_UPDATES + " INTEGER);";
 		return ret;
 	}
 

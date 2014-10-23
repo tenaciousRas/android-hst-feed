@@ -21,24 +21,13 @@
  */
 package com.longevitysoft.android.appwidget.hstfeed.activity;
 
-import java.lang.ref.WeakReference;
-
-import com.longevitysoft.android.appwidget.hstfeed.handler.HSTFeedXMLWorkerHandler.HSTFeedXMLWorkerListener;
-import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService;
-import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService.HSTFeedXML;
-
 import android.app.Activity;
 import android.appwidget.AppWidgetManager;
-import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.IBinder;
-import android.os.Message;
 import android.util.Log;
-import android.widget.RemoteViews;
+
+import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService;
 
 /**
  * Base activity for features and code common to multiple activities.
@@ -46,29 +35,9 @@ import android.widget.RemoteViews;
  * @author fbeachler
  * 
  */
-public class BaseActivity extends Activity implements HSTFeedXMLWorkerListener {
+public abstract class BaseActivity extends Activity {
 
 	public static final String TAG = "BaseActivity";
-
-	/**
-	 * Handler for messages from service.
-	 */
-	protected ServiceHandler sHandler;
-
-	/**
-	 * Intent to bind HST Feed service.
-	 */
-	protected Intent mServiceBindIntent;
-
-	/**
-	 * HST Feed Service for downloading XML feed and images.
-	 */
-	protected HSTFeedService feedService;
-
-	/**
-	 * Flag if service is bound.
-	 */
-	protected boolean feedServiceBound = false;
 
 	/**
 	 * App widget ID -- assigned by os.
@@ -85,211 +54,64 @@ public class BaseActivity extends Activity implements HSTFeedXMLWorkerListener {
 	 */
 	protected int widgetSize;
 
-	public static class ServiceHandler extends Handler {
-
-		private WeakReference<BaseActivity> activity;
-
-		/**
-		 * @param activity
-		 *            the activity to set
-		 */
-		public void setActivity(WeakReference<BaseActivity> activity) {
-			this.activity = activity;
-		}
-
-		@Override
-		public void handleMessage(Message msg) {
-			// Log.v(TAG, new
-			// StringBuilder().append("#handleMessage - msg.what=")
-			// .append(msg.what).append(", msg.data=").append(msg.getData())
-			// .append(", msg.arg1=").append(msg.arg1).toString());
-			Bundle data = msg.getData();
-			Thread t = null;
-			switch (msg.what) {
-			case HSTFeedService.WHAT_REMOTE_VIEWS:
-				Log.d(TAG, "got remote views from service");
-				final int appWidgetId = msg.arg1;
-				final RemoteViews rv = data
-						.getParcelable(HSTFeedService.BUNDLE_NAME_REMOTE_VIEWS);
-				t = new Thread() {
-
-					@Override
-					public void run() {
-						activity.get().runOnUiThread(new Runnable() {
-							public void run() {
-								AppWidgetManager manager = AppWidgetManager
-										.getInstance(activity.get()
-												.getBaseContext());
-								manager.updateAppWidget(appWidgetId, rv);
-							}
-						});
-					}
-
-				};
-				t.start();
-				break;
-			default:
-				super.handleMessage(msg);
-			}
-		}
-	}
-
-	// private final BroadcastReceiver feedChangeReceiver = new
-	// BroadcastReceiver() {
-	//
-	// public void onReceive(Context context, Intent intent) {
-	// String action = intent.getAction();
-	// Log.d(TAG, "feedChangeReceiver intent=" + intent.toString());
-	// final Intent mIntent = intent;
-	// }
-	// };
-
-	protected ServiceConnection mServiceConnection = new ServiceConnection() {
-		public void onServiceDisconnected(ComponentName arg0) {
-			Log.i(TAG, "BaseActivity::onServiceDisconnected");
-			feedService.removeXMLWorkerListener(BaseActivity.this);
-			feedService = null;
-			feedServiceBound = false;
-		}
-
-		public void onServiceConnected(ComponentName comp, IBinder binder) {
-			Log.i(TAG, "BaseActivity::onServiceConnected");
-			feedService = ((HSTFeedService.LocalBinder) binder).getService();
-			feedServiceBound = true;
-			handleOnServiceConnected();
-		}
-	};
-
-	/**
-	 * @return the mServiceBindIntent
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see android.app.Activity#onCreate(android.os.Bundle)
 	 */
-	public Intent getBindIntent() {
-		return mServiceBindIntent;
-	}
-
-	/**
-	 * @return the feedService
-	 */
-	public HSTFeedService getfeedService() {
-		return feedService;
-	}
-
-	/**
-	 * @return the sHandler
-	 */
-	public Handler getServiceHandler() {
-		return sHandler;
-	}
-
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		Log.v(TAG, "OnCreate");
-		sHandler = new ServiceHandler();
-		sHandler.setActivity(new WeakReference<BaseActivity>(this));
 		Intent intent = getIntent();
 		if (intent != null) {
 			widgetSize = intent.getIntExtra("widgetSize",
 					HSTFeedService.SIZE_SMALL);
+		} else {
+			widgetSize = HSTFeedService.SIZE_SMALL;
 		}
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see android.app.Activity#onResume()
+	 */
 	@Override
 	protected void onResume() {
 		super.onResume();
 		init();
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see android.app.Activity#onPause()
+	 */
 	@Override
 	protected void onPause() {
 		super.onPause();
-		feedService.removeXMLWorkerListener(this);
-		stopService(mServiceBindIntent);
-		if (null != mServiceConnection) {
-			try {
-				unbindService(mServiceConnection);
-			} catch (Exception e) {
-				Log.w(TAG, e.getClass().getCanonicalName()
-						+ " caught when unbinding service");
-			}
-		}
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see android.app.Activity#onStop()
+	 */
 	@Override
 	protected void onStop() {
 		super.onStop();
 	}
 
+	/**
+	 * 
+	 */
 	private void init() {
-		Log.d(TAG, "init() feedService=" + feedService);
-		if (!feedServiceBound) {
-			mServiceBindIntent = new Intent(this, HSTFeedService.class);
-			bindService(mServiceBindIntent, mServiceConnection,
-					Context.BIND_AUTO_CREATE);
-		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * com.longevitysoft.android.appwidget.hstfeed.handler.HSTFeedXMLWorkerHandler
-	 * .HSTFeedXMLWorkerListener#onFeedParseStart()
-	 */
-	@Override
-	public void onFeedParseStart() {
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * com.longevitysoft.android.appwidget.hstfeed.handler.HSTFeedXMLWorkerHandler
-	 * .HSTFeedXMLWorkerListener#onFeedXMLLoaded(int)
-	 */
-	@Override
-	public void onFeedXMLLoaded(int numImages) {
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * com.longevitysoft.android.appwidget.hstfeed.handler.HSTFeedXMLWorkerHandler
-	 * .HSTFeedXMLWorkerListener#onFeedImageLoaded(java.lang.String)
-	 */
-	@Override
-	public void onFeedImageLoaded(String imgSrc) {
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * com.longevitysoft.android.appwidget.hstfeed.handler.HSTFeedXMLWorkerHandler
-	 * .
-	 * HSTFeedXMLWorkerListener#onFeedAllImagesLoaded(com.longevitysoft.android.
-	 * appwidget.hstfeed.service.HSTFeedService.HSTFeedXML)
-	 */
-	@Override
-	public void onFeedAllImagesLoaded(HSTFeedXML feed) {
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * com.longevitysoft.android.appwidget.hstfeed.handler.HSTFeedXMLWorkerHandler
-	 * .HSTFeedXMLWorkerListener#onFeedParseComplete()
-	 */
-	@Override
-	public void onFeedParseComplete() {
 	}
 
 	/**
 	 * Called when service connected.
 	 */
 	public void handleOnServiceConnected() {
-		feedService.addXMLWorkerListener(this);
 	}
 }

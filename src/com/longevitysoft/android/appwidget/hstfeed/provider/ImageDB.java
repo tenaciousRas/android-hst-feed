@@ -51,7 +51,9 @@ public class ImageDB extends SQLiteOpenHelper {
 	public static final String TAG = "ImageDB";
 
 	private static final String DB_NAME = "hstfeed_images.db";
-	private static final int DB_VERSION = 1;
+	private static final int DB_VERSION = 2;
+
+	public static final int WIDGETS_CURRENT_IMAGE_ID_NOTSET = -1;
 
 	private SQLiteDatabase db = null;
 	private static ImageDB iDBInstance;
@@ -79,7 +81,7 @@ public class ImageDB extends SQLiteOpenHelper {
 
 	@Override
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-		if (oldVersion != DB_VERSION) {
+		if (oldVersion < DB_VERSION) {
 			db.execSQL("DROP TABLE IF EXISTS " + ImageDBUtil.TABLE_IMAGES);
 			db.execSQL("DROP TABLE IF EXISTS " + ImageDBUtil.TABLE_WIDGETS);
 			onCreate(db);
@@ -98,20 +100,20 @@ public class ImageDB extends SQLiteOpenHelper {
 	 * @param order
 	 * @return
 	 */
-	public boolean createWidget(int appWidgetId, int type, int period,
-			Float ra, Float dec, Float area, int order) {
+	public boolean createWidget(int appWidgetId, int widgetSize, int type,
+			int period, Float ra, Float dec, Float area, int order) {
 		deleteWidget(appWidgetId);
 		SQLiteDatabase db = getWritableDatabase();
 		ContentValues values = new ContentValues();
 		values.put(ImageDBUtil.WIDGETS_ID, appWidgetId);
+		values.put(ImageDBUtil.WIDGETS_SIZE, widgetSize);
 		values.put(ImageDBUtil.WIDGETS_TYPE, type);
 		values.put(ImageDBUtil.WIDGETS_PERIOD, period);
 		values.put(ImageDBUtil.WIDGETS_RA, ra);
 		values.put(ImageDBUtil.WIDGETS_DEC, dec);
 		values.put(ImageDBUtil.WIDGETS_AREA, area);
 		values.put(ImageDBUtil.WIDGETS_ORDER, order);
-
-		values.put(ImageDBUtil.WIDGETS_CURRENT, 1);
+		values.put(ImageDBUtil.WIDGETS_CURRENT, WIDGETS_CURRENT_IMAGE_ID_NOTSET);
 		values.put(ImageDBUtil.WIDGETS_LASTUPDATE, 0);
 		values.put(ImageDBUtil.WIDGETS_UPDATES, 0);
 		boolean ret = db.insert(ImageDBUtil.TABLE_WIDGETS, null, values) > -1;
@@ -172,14 +174,19 @@ public class ImageDB extends SQLiteOpenHelper {
 	 */
 	public boolean needsUpdate(int appWidgetId) {
 		Bundle widget = getWidget(appWidgetId);
-
+		if (null == widget) {
+			return true;
+		}
 		Time now = new Time();
 		now.setToNow();
 		Time last = new Time();
-		last.set(widget.getLong(ImageDBUtil.WIDGETS_LASTUPDATE));
-		last.minute += widget.getInt(ImageDBUtil.WIDGETS_PERIOD);
-		last.second -= 5;
-
+		if (!widget.containsKey(ImageDBUtil.WIDGETS_LASTUPDATE)) {
+			last = now;
+		} else {
+			last.set(widget.getLong(ImageDBUtil.WIDGETS_LASTUPDATE));
+			last.minute += widget.getInt(ImageDBUtil.WIDGETS_PERIOD);
+			last.second -= 5;
+		}
 		if (last.before(now)) {
 			Cursor c = db.query(ImageDBUtil.TABLE_IMAGES, new String[] {
 					ImageDBUtil.IMAGES_ID, ImageDBUtil.IMAGES_WEIGHT },
@@ -200,6 +207,7 @@ public class ImageDB extends SQLiteOpenHelper {
 				c.moveToLast();
 				int idx = c.getColumnIndex(ImageDBUtil.IMAGES_ID);
 				if (0 > idx || idx >= c.getColumnCount()) {
+					c.close();
 					return true;
 				}
 				// current image is not last image
@@ -366,16 +374,10 @@ public class ImageDB extends SQLiteOpenHelper {
 			String bitmapFilepath = c.getString(c
 					.getColumnIndex(ImageDBUtil.IMAGES_FILEPATH));
 			Options opts = new Options();
-			opts.inDither = true;
 			opts.inJustDecodeBounds = true;
-			opts.inPurgeable = true;
-			opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
-			bitmap = BitmapFactory.decodeFile(bitmapFilepath, opts);
-			if (null == bitmap) {
-				return bounds;
-			}
-			bounds.add(bitmap.getWidth());
-			bounds.add(bitmap.getHeight());
+			BitmapFactory.decodeFile(bitmapFilepath, opts);
+			bounds.add(opts.outWidth);
+			bounds.add(opts.outHeight);
 		}
 		c.close();
 		return bounds;
@@ -455,6 +457,8 @@ public class ImageDB extends SQLiteOpenHelper {
 					Log.e(TAG, Log.getStackTraceString(e));
 				}
 			}
+		} else {
+			c.close();
 		}
 		return baos;
 	}
@@ -518,23 +522,26 @@ public class ImageDB extends SQLiteOpenHelper {
 		Cursor c = db.query(ImageDBUtil.TABLE_IMAGES,
 				new String[] { ImageDBUtil.IMAGES_ID }, whereClause, whereArgs,
 				null, null, ImageDBUtil.IMAGES_WEIGHT);
-		if (null == c || 0 == c.getCount()) {
+		if (null == c) {
 			return;
 		}
-		c.moveToFirst();
-		do {
-			int id = c.getInt(c.getColumnIndex(ImageDBUtil.IMAGES_ID));
-			// delete file
-			try {
-				File f = new File(HSTFeedUtil.buildImgFilePath(appWidgetId, id,
-						ctx));
-				f.delete();
-			} catch (Exception e) {
-				Log.w(TAG,
-						"exception while attempting to delete image from cache, exception was"
-								+ Log.getStackTraceString(e));
-			}
-		} while (c.moveToNext());
+		if (0 < c.getCount()) {
+			c.moveToFirst();
+			do {
+				int id = c.getInt(c.getColumnIndex(ImageDBUtil.IMAGES_ID));
+				// delete file
+				try {
+					File f = new File(HSTFeedUtil.buildImgFilePath(appWidgetId,
+							id, ctx));
+					f.delete();
+				} catch (Exception e) {
+					Log.w(TAG,
+							"exception while attempting to delete image from cache, exception was"
+									+ Log.getStackTraceString(e));
+				}
+			} while (c.moveToNext());
+		}
+		c.close();
 		db.delete(ImageDBUtil.TABLE_IMAGES, whereClause, whereArgs);
 	}
 
@@ -643,14 +650,17 @@ public class ImageDB extends SQLiteOpenHelper {
 	public Bundle getWidget(int appWidgetId) {
 		String whereClause = ImageDBUtil.WIDGETS_ID + " = ?";
 		String[] whereArgs = new String[] { Integer.toString(appWidgetId) };
-		Cursor c = db.query(ImageDBUtil.TABLE_WIDGETS, new String[] {
-				ImageDBUtil.WIDGETS_ID, ImageDBUtil.WIDGETS_CURRENT,
-				ImageDBUtil.WIDGETS_LASTUPDATE, ImageDBUtil.WIDGETS_ORDER,
-				ImageDBUtil.WIDGETS_PERIOD, ImageDBUtil.WIDGETS_RA,
-				ImageDBUtil.WIDGETS_DEC, ImageDBUtil.WIDGETS_AREA,
-				ImageDBUtil.WIDGETS_TYPE, ImageDBUtil.WIDGETS_IMG_LIST_COUNT,
-				ImageDBUtil.WIDGETS_UPDATES }, whereClause, whereArgs, null,
-				null, null);
+		Cursor c = db.query(ImageDBUtil.TABLE_WIDGETS,
+				new String[] { ImageDBUtil.WIDGETS_ID,
+						ImageDBUtil.WIDGETS_SIZE, ImageDBUtil.WIDGETS_TYPE,
+						ImageDBUtil.WIDGETS_CURRENT,
+						ImageDBUtil.WIDGETS_LASTUPDATE,
+						ImageDBUtil.WIDGETS_ORDER, ImageDBUtil.WIDGETS_PERIOD,
+						ImageDBUtil.WIDGETS_RA, ImageDBUtil.WIDGETS_DEC,
+						ImageDBUtil.WIDGETS_AREA,
+						ImageDBUtil.WIDGETS_IMG_LIST_COUNT,
+						ImageDBUtil.WIDGETS_UPDATES }, whereClause, whereArgs,
+				null, null, null);
 		Bundle bundle = null;
 		if (null == c) {
 			return bundle;
@@ -659,6 +669,10 @@ public class ImageDB extends SQLiteOpenHelper {
 			bundle = new Bundle();
 			bundle.putInt(ImageDBUtil.WIDGETS_ID, Integer.valueOf(c.getInt(c
 					.getColumnIndex(ImageDBUtil.WIDGETS_ID))));
+			bundle.putInt(ImageDBUtil.WIDGETS_SIZE, Integer.valueOf(c.getInt(c
+					.getColumnIndex(ImageDBUtil.WIDGETS_SIZE))));
+			bundle.putInt(ImageDBUtil.WIDGETS_TYPE, Integer.valueOf(c.getInt(c
+					.getColumnIndex(ImageDBUtil.WIDGETS_TYPE))));
 			bundle.putInt(ImageDBUtil.WIDGETS_CURRENT, Integer.valueOf(c
 					.getInt(c.getColumnIndex(ImageDBUtil.WIDGETS_CURRENT))));
 			bundle.putLong(ImageDBUtil.WIDGETS_LASTUPDATE, Long.valueOf(c
@@ -675,8 +689,6 @@ public class ImageDB extends SQLiteOpenHelper {
 					.getString(c.getColumnIndex(ImageDBUtil.WIDGETS_AREA))));
 			bundle.putInt(ImageDBUtil.WIDGETS_IMG_LIST_COUNT, c.getInt(c
 					.getColumnIndex(ImageDBUtil.WIDGETS_IMG_LIST_COUNT)));
-			bundle.putInt(ImageDBUtil.WIDGETS_TYPE, Integer.valueOf(c.getInt(c
-					.getColumnIndex(ImageDBUtil.WIDGETS_TYPE))));
 			bundle.putInt(ImageDBUtil.WIDGETS_UPDATES, Integer.valueOf(c
 					.getInt(c.getColumnIndex(ImageDBUtil.WIDGETS_UPDATES))));
 		}
@@ -694,25 +706,28 @@ public class ImageDB extends SQLiteOpenHelper {
 		Cursor c = db.query(ImageDBUtil.TABLE_IMAGES, new String[] {
 				ImageDBUtil.IMAGES_ID, ImageDBUtil.IMAGES_WEIGHT },
 				whereClause, whereArgs, null, null, ImageDBUtil.IMAGES_WEIGHT);
-		Integer ret = null;
+		Integer ret = Integer.valueOf(WIDGETS_CURRENT_IMAGE_ID_NOTSET);
 		Integer prevId = null;
-		if (c.moveToFirst()) {
-			do {
-				if (c.getInt(c.getColumnIndex(ImageDBUtil.IMAGES_ID)) == current) {
-					if (null == prevId) {
-						// prev image at end of cursor
-						c.moveToLast();
-						ret = c.getInt(c.getColumnIndex(ImageDBUtil.IMAGES_ID));
+		if (null != c) {
+			if (c.moveToFirst()) {
+				do {
+					if (c.getInt(c.getColumnIndex(ImageDBUtil.IMAGES_ID)) == current) {
+						if (null == prevId) {
+							// prev image at end of cursor
+							c.moveToLast();
+							ret = Integer.valueOf(c.getInt(c
+									.getColumnIndex(ImageDBUtil.IMAGES_ID)));
+						} else {
+							ret = prevId;
+						}
+						break; // got id, exit loop
 					} else {
+						prevId = Integer.valueOf(c.getInt(c
+								.getColumnIndex(ImageDBUtil.IMAGES_ID)));
 						ret = prevId;
 					}
-					break; // got id, exit loop
-				} else {
-					prevId = c.getInt(c.getColumnIndex(ImageDBUtil.IMAGES_ID));
-				}
-			} while (c.moveToNext());
-		}
-		if (null != c) {
+				} while (c.moveToNext());
+			}
 			c.close();
 		}
 		return ret;

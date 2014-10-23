@@ -22,7 +22,6 @@
 package com.longevitysoft.android.appwidget.hstfeed.util;
 
 import java.io.File;
-import java.util.Vector;
 
 import android.app.PendingIntent;
 import android.content.Context;
@@ -81,41 +80,70 @@ public class HSTFeedUtil {
 	 * Calculate the optimal bitmap scale factor given widget widgetSize and
 	 * bitmap boundaries.
 	 * 
+	 * @return public static int calcBitmapScaleFactor(int widgetSize,
+	 *         Vector<Integer> imgBounds) { int ret = 2; if (null == imgBounds
+	 *         || imgBounds.isEmpty()) { return ret; } int width =
+	 *         imgBounds.get(0); int height = imgBounds.get(1); switch
+	 *         (widgetSize) { case HSTFeedService.SIZE_LARGE: if (width > 1024)
+	 *         { ret = 2; } break; case HSTFeedService.SIZE_MEDIUM: if (width >
+	 *         1024) { ret = 4; } else if (width < 512) { ret = 1; } else { ret
+	 *         = 2; } break; case HSTFeedService.SIZE_SMALL: if (width < 150) {
+	 *         ret = 1; } else { ret = 4; } default: break; } return ret; }
+	 */
+
+	/**
+	 * @param options
+	 * @param reqWidth
+	 * @param reqHeight
 	 * @return
 	 */
-	public static int calcBitmapScaleFactor(int widgetSize,
-			Vector<Integer> imgBounds) {
-		int ret = 2;
-		if (null == imgBounds || imgBounds.isEmpty()) {
-			return ret;
-		}
-		int width = imgBounds.get(0);
-		int height = imgBounds.get(1);
+	public static int calculateInSampleSize(int outWidth, int outHeight,
+			int widgetSize) {
+		// Raw height and width of image
+		int reqWidth = -1, reqHeight = -1;
 		switch (widgetSize) {
 		case HSTFeedService.SIZE_LARGE:
-			if (width > 1024) {
-				ret = 2;
-			}
+			reqWidth = 380;
+			reqHeight = 285;
 			break;
 		case HSTFeedService.SIZE_MEDIUM:
-			if (width > 1024) {
-				ret = 4;
-			} else if (width < 512) {
-				ret = 1;
-			} else {
-				ret = 2;
-			}
+			reqWidth = 185;
+			reqHeight = 169;
 			break;
 		case HSTFeedService.SIZE_SMALL:
-			if (width < 150) {
-				ret = 1;
-			} else {
-				ret = 4;
-			}
 		default:
+			reqWidth = 105;
+			reqHeight = 105;
 			break;
 		}
-		return ret;
+		return HSTFeedUtil.calculateInSampleSize(outWidth, outHeight, reqWidth,
+				reqHeight);
+	}
+
+	/**
+	 * @param options
+	 * @param reqWidth
+	 * @param reqHeight
+	 * @return
+	 */
+	public static int calculateInSampleSize(int outWidth, int outHeight,
+			int reqWidth, int reqHeight) {
+		// Raw height and width of image
+		final int height = outHeight;
+		final int width = outWidth;
+		int inSampleSize = 1;
+		if (height > reqHeight || width > reqWidth) {
+			final int halfHeight = height / 2;
+			final int halfWidth = width / 2;
+			// Calculate the largest inSampleSize value that is a power of 2 and
+			// keeps both
+			// height and width larger than the requested height and width.
+			while ((halfHeight / inSampleSize) > reqHeight
+					&& (halfWidth / inSampleSize) > reqWidth) {
+				inSampleSize *= 2;
+			}
+		}
+		return inSampleSize;
 	}
 
 	/**

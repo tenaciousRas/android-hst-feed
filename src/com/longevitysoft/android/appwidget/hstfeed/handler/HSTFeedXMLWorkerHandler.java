@@ -37,15 +37,20 @@ import com.longevitysoft.android.appwidget.hstfeed.service.HSTFeedService.HSTFee
 public class HSTFeedXMLWorkerHandler extends Handler {
 
 	public static interface HSTFeedXMLWorkerListener {
-		public void onFeedParseStart();
+		public void onFeedParseStart(final int appWidgetId, final int widgetSize);
 
-		public void onFeedXMLLoaded(int numImages);
+		public void onFeedXMLLoaded(final int appWidgetId,
+				final int widgetSize, final int numImages);
 
-		public void onFeedImageLoaded(String imgSrc);
+		public void onFeedImageLoaded(final int appWidgetId,
+				final int widgetSize, final String imgSrc);
 
-		public void onFeedAllImagesLoaded(HSTFeedXML feed);
+		public void onFeedAllImagesLoaded(final int appWidgetId,
+				final int widgetSize, final HSTFeedXML feed);
 
-		public void onFeedParseComplete();
+		public void onFeedParseComplete(final int appWidgetId,
+				final int widgetSize);
+
 	}
 
 	public static final int MSG_WHAT_FEED_PARSE_STARTED = 0;
@@ -56,7 +61,7 @@ public class HSTFeedXMLWorkerHandler extends Handler {
 
 	private List<HSTFeedXMLWorkerListener> listeners;
 
-	public HSTFeedXMLWorkerHandler() {
+	public HSTFeedXMLWorkerHandler(int appWidgetId) {
 		init();
 	}
 
@@ -89,39 +94,42 @@ public class HSTFeedXMLWorkerHandler extends Handler {
 	 */
 	@Override
 	public void handleMessage(Message msg) {
+		int appWidgetId = msg.arg1;
+		int widgetSize = msg.arg2;
 		switch (msg.what) {
 		case MSG_WHAT_FEED_PARSE_STARTED:
 			if (null != listeners) {
 				for (HSTFeedXMLWorkerListener listener : listeners) {
-					listener.onFeedParseStart();
+					listener.onFeedParseStart(appWidgetId, widgetSize);
 				}
 			}
 			break;
 		case MSG_WHAT_FEED_XML_LOADED:
 			if (null != listeners) {
 				for (HSTFeedXMLWorkerListener listener : listeners) {
-					listener.onFeedXMLLoaded(msg.arg1);
+					listener.onFeedXMLLoaded(appWidgetId, widgetSize, (Integer) msg.obj);
 				}
 			}
 			break;
 		case MSG_WHAT_FEED_IMAGE_LOADED:
 			if (null != listeners) {
 				for (HSTFeedXMLWorkerListener listener : listeners) {
-					listener.onFeedImageLoaded((String) msg.obj);
+					listener.onFeedImageLoaded(appWidgetId, widgetSize, (String) msg.obj);
 				}
 			}
 			break;
 		case MSG_WHAT_FEED_IMAGES_ALL_LOADED:
 			if (null != listeners) {
 				for (HSTFeedXMLWorkerListener listener : listeners) {
-					listener.onFeedAllImagesLoaded((HSTFeedXML) msg.obj);
+					listener.onFeedAllImagesLoaded(appWidgetId, widgetSize, 
+							(HSTFeedXML) msg.obj);
 				}
 			}
 			break;
 		case MSG_WHAT_FEED_PARSE_COMPLETE:
 			if (null != listeners) {
 				for (HSTFeedXMLWorkerListener listener : listeners) {
-					listener.onFeedParseComplete();
+					listener.onFeedParseComplete(appWidgetId, widgetSize);
 				}
 			}
 			break;
