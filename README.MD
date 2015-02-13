@@ -1,4 +1,4 @@
-This is the source code for the AHST Feed Images widget for Android.  HST Feed is an Android widget that displays the MAST Hubble Space Telescope PR images feed.
+This is the source code for the HST Feed Images widget for Android.  HST Feed is an Android widget that displays the MAST Hubble Space Telescope PR images feed.
 
 This widget can be downloaded from Google Play at https://play.google.com/store/apps/details?id=com.longevitysoft.android.appwidget.hstfeed.
 
